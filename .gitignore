@@ -1,0 +1,5 @@
+*.sw[po]
+libmre*.dylib
+*.dSYM/
+mre
+test

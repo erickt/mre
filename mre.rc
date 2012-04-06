@@ -1,0 +1,13 @@
+#[link(name = "mre",
+       vers = "0.1pre",
+       uuid = "b85803ee-819d-4b9d-adcd-ed8e356ceee3")];
+#[crate_type = "lib"];
+
+use std;
+use zmq;
+use mongrel2;
+use pcre;
+
+mod request;
+mod response;
+mod router;
