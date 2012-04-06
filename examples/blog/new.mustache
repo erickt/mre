@@ -1,0 +1,15 @@
+{{> top}}
+
+{{# post}}
+<form action="/posts/" method="post">
+	<label>Title:</label>
+	<input type="text" name="title" value="{{title}}">
+
+	<label>Body:</label>
+	<textarea type="text" name="body" rows="10" cols="100">{{body}}</textarea>
+
+	<input type="submit" value="save">
+</form>
+{{/ post}}
+
+{{> bottom}}

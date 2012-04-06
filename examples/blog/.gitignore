@@ -1,0 +1,6 @@
+*.sw[po]
+blog
+*.dSYM
+logs/*.log
+run/*.pid
+config.sqlite
