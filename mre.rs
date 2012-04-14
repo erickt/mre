@@ -18,6 +18,8 @@ impl mre for mre {
         loop {
             let req = self.m2.recv();
 
+            if req.is_disconnect() { cont; }
+
             let rep = alt req.headers.find("METHOD") {
               none {
                 // Error out the request if we didn't get a method.

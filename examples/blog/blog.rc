@@ -4,5 +4,6 @@ use mongrel2;
 use mre;
 use mustache;
 use elasticsearch;
+use uri;
 
 mod post;

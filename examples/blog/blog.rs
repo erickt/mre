@@ -7,10 +7,10 @@ import zmq::{context, error};
 import mongrel2::connection;
 import elasticsearch::{client, search_builder, index_builder, json_dict_builder};
 
-import mre::{mre, request, response};
-import mre::response::{http_200, http_400, http_404, redirect};
-import request = mre::request::request;
-import response = mre::response::response;
+import mre::mre;
+import mre::response::{response, http_200, http_400, http_404, redirect};
+
+import mongrel2::request;
 
 import post::post;
 
@@ -32,59 +32,6 @@ fn json_to_mustache(j: json::json) -> mustache::data {
         mustache::map(m)
       }
       json::null { mustache::bool(false) }
-    }
-}
-
-fn url_decode(s: [u8]) -> hashmap<str, [str]> {
-    io::with_bytes_reader(s) { |rdr|
-        let m = str_hash();
-        let mut key = "";
-        let mut value = "";
-        let mut parsing_key = true;
-
-        while !rdr.eof() {
-            alt rdr.read_char() {
-              '&' | ';' {
-                if key != "" && value != "" {
-                    let values = alt m.find(key) {
-                      some(values) { values }
-                      none { [] }
-                    };
-                    m.insert(key, values + [value]);
-                }
-
-                parsing_key = true;
-                key = "";
-                value = "";
-              }
-              '=' { parsing_key = false; }
-              ch {
-                let ch = alt ch {
-                  '%' {
-                    uint::parse_buf(rdr.read_bytes(2u), 16u).get() as char
-                  }
-                  '+' { ' ' }
-                  ch { ch }
-                };
-
-                if parsing_key {
-                    str::push_char(key, ch)
-                } else {
-                    str::push_char(value, ch)
-                }
-              }
-            }
-        }
-
-        if key != "" && value != "" {
-            let values = alt m.find(key) {
-              some(values) { values }
-              none { [] }
-            };
-            m.insert(key, values + [value]);
-        }
-
-        m
     }
 }
 
@@ -159,7 +106,7 @@ fn main() {
     }
 
     mre.router.add("POST", "^/posts$") { |req, _m|
-        let form = url_decode(req.body);
+        let form = uri::decode_qs(req.body);
         let post = post::post("");
 
         alt form.find("title") {
@@ -172,8 +119,6 @@ fn main() {
           none {}
         }
 
-        #error("%?", post);
-
         alt post.save(es) {
           none { http_400(req) }
           some(id) { redirect(req, "/posts/" + id) }
@@ -183,7 +128,7 @@ fn main() {
 
     mre.router.add("POST", "^/posts/(?<id>\\w+)$") { |req, m|
         let id = m.named("id");
-        let form = url_decode(req.body);
+        let form = uri::decode_qs(req.body);
 
         alt post::find(es, id) {
           none { http_404(req) }

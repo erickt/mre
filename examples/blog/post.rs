@@ -1,6 +1,6 @@
 import std::map::{hashmap, str_hash};
 import std::json;
-import elasticsearch;
+import elasticsearch::{client, search_builder, index_builder, json_dict_builder};
 
 type post = {
     id: str,
@@ -67,7 +67,7 @@ fn all(es: elasticsearch::client) -> [post] {
 
 impl post for post {
     fn title() -> str {
-        self.source.find("title").with_option("", { |title|
+        self.source.find("title").map_default("", { |title|
             alt check title { json::string(title) { title } }
         })
     }
@@ -77,7 +77,7 @@ impl post for post {
     }
 
     fn body() -> str {
-        self.source.find("body").with_option("") { |body|
+        self.source.find("body").map_default("") { |body|
             alt check body { json::string(body) { body } }
         }
     }
@@ -91,11 +91,9 @@ impl post for post {
             .set_source(self.source);
 
         if self.id != "" { index.set_id(self.id); }
-        self.version.with_option_do { |v| index.set_version(v); };
+        self.version.iter { |v| index.set_version(v); };
 
         let rep = index.execute();
-
-        #error("%?", rep);
 
         if rep.code == 200u {
             let body = alt check rep.body { json::dict(body) { body } };

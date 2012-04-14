@@ -1,4 +1,4 @@
-import request::request;
+import mongrel2::request;
 import response::response;
 
 type handler = fn@(request, pcre::match) -> response;
@@ -31,7 +31,7 @@ fn router() -> router {
         }
 
         fn find(method: str, path: str) -> option<(handler, pcre::match)> {
-            for item in self.routes {
+            for self.routes.each() { |item|
                 let (meth, regex, handler) = item;
 
                 if method == meth {

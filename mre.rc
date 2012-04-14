@@ -8,6 +8,5 @@ use zmq;
 use mongrel2;
 use pcre;
 
-mod request;
 mod response;
 mod router;
