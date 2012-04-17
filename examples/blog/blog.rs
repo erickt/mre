@@ -20,21 +20,6 @@ fn render_200(req: request, mu: mustache::context, path: str,
     http_200(req, str::bytes(template))
 }
 
-fn json_to_mustache(j: json::json) -> mustache::data {
-    alt j {
-      json::string(s) { mustache::str(s) }
-      json::num(n) { mustache::str(#fmt("%f", n)) }
-      json::boolean(b) { mustache::bool(b) }
-      json::list(v) { mustache::vec(v.map(json_to_mustache)) }
-      json::dict(d) {
-        let m = str_hash();
-        d.items { |k, v| m.insert(k, json_to_mustache(v)); };
-        mustache::map(m)
-      }
-      json::null { mustache::bool(false) }
-    }
-}
-
 fn main() {
     let ctx =
         alt zmq::init(1) {
