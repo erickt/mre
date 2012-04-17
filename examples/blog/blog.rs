@@ -4,20 +4,19 @@ import result::{ok, err, extensions};
 import std::map::{hashmap, str_hash, hash_from_strs};
 import std::json;
 
-import zmq::{context, error};
-
 import elasticsearch::{client, search_builder, index_builder, json_dict_builder};
-
+import mongrel2::{connection, request};
 import mre::mre;
 import mre::response::{response, http_200, http_400, http_404, redirect};
-
-import mongrel2::{connection, request};
+import mu_context = mustache::context;
+import zmq_context = zmq::context;
+import zmq::error;
 
 import post::post;
 
-fn render_200(req: request, path: str, data: hashmap<str, mustache::data>)
-  -> response {
-    let template = mustache::render_file(path, data);
+fn render_200(req: request, mu: mustache::context, path: str,
+              data: hashmap<str, mustache::data>) -> response {
+    let template = mu.render_file(path, data);
     http_200(req, str::bytes(template))
 }
 
@@ -43,6 +42,8 @@ fn main() {
           err(e) { fail e.to_str() }
         };
 
+    let mu = mustache::context("views", ".mustache");
+
     let es = elasticsearch::connect_with_zmq(ctx, "tcp://localhost:9700");
 
     let m2 = mongrel2::connect(ctx,
@@ -65,7 +66,7 @@ fn main() {
     mre.router.add("GET", "^/$") { |req, _m|
         let posts = post::all(es).map(post_to_mustache);
 
-        render_200(req, "index.mustache", hash_from_strs([
+        render_200(req, mu, "index", hash_from_strs([
             ("posts", mustache::vec(posts))
         ]))
     }
@@ -78,7 +79,7 @@ fn main() {
               mustache::map(m) { m }
             };
 
-            render_200(req, "show.mustache", m)
+            render_200(req, mu, "show", m)
           }
         }
     }
@@ -90,7 +91,7 @@ fn main() {
           mustache::map(m) { m }
         };
 
-        render_200(req, "new.mustache", m)
+        render_200(req, mu, "new", m)
     }
 
     mre.router.add("GET", "^/posts/(?<id>\\w+)/edit$") { |req, m|
@@ -101,7 +102,7 @@ fn main() {
               mustache::map(m) { m }
             };
 
-            render_200(req, "edit.mustache", m)
+            render_200(req, mu, "edit", m)
           }
         }
     }
