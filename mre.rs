@@ -3,6 +3,8 @@ import std::map::hashmap;
 import std::time;
 import std::time::tm;
 
+import mongrel2::request;
+
 type mre = {
     m2: mongrel2::connection,
     router: router::router,

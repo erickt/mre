@@ -1,16 +1,17 @@
 import io::{reader, reader_util};
+import result::{ok, err, extensions};
+
 import std::map::{hashmap, str_hash, hash_from_strs};
 import std::json;
 
-import result::{ok, err, extensions};
 import zmq::{context, error};
-import mongrel2::connection;
+
 import elasticsearch::{client, search_builder, index_builder, json_dict_builder};
 
 import mre::mre;
 import mre::response::{response, http_200, http_400, http_404, redirect};
 
-import mongrel2::request;
+import mongrel2::{connection, request};
 
 import post::post;
 
