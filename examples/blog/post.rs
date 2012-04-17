@@ -95,13 +95,19 @@ impl post for post {
 
         let rep = index.execute();
 
-        if rep.code == 200u {
+        if rep.code == 200u || rep.code == 201u {
             let body = alt check rep.body { json::dict(body) { body } };
             alt check body.get("_id") {
               json::string(id) { some(id) }
             }
         } else {
             none
+        }
+    }
+
+    fn delete(es: elasticsearch::client) {
+        if self.id != "" {
+            es.delete("blog", "post", self.id);
         }
     }
 }

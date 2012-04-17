@@ -56,7 +56,17 @@ fn main() {
         ]))
     }
 
-    mre.router.add("GET", "^/posts/(?<id>\\w+)$") { |req, m|
+    mre.router.add("GET", "^/posts/new$") { |req, _m|
+        let post = post::post("");
+
+        let m = alt check post_to_mustache(post) {
+          mustache::map(m) { m }
+        };
+
+        render_200(req, mu, "new", m)
+    }
+
+    mre.router.add("GET", "^/posts/(?<id>[-_A-Za-z0-9]+)$") { |req, m|
         alt post::find(es, m.named("id")) {
           none { http_404(req) }
           some(post) {
@@ -69,17 +79,7 @@ fn main() {
         }
     }
 
-    mre.router.add("GET", "^/new-post$") { |req, _m|
-        let post = post::post("");
-
-        let m = alt check post_to_mustache(post) {
-          mustache::map(m) { m }
-        };
-
-        render_200(req, mu, "new", m)
-    }
-
-    mre.router.add("GET", "^/posts/(?<id>\\w+)/edit$") { |req, m|
+    mre.router.add("GET", "^/posts/(?<id>[-_A-Za-z0-9]+)/edit$") { |req, m|
         alt post::find(es, m.named("id")) {
           none { http_404(req) }
           some(post) {
@@ -113,7 +113,7 @@ fn main() {
     }
 
 
-    mre.router.add("POST", "^/posts/(?<id>\\w+)$") { |req, m|
+    mre.router.add("POST", "^/posts/(?<id>[-_A-Za-z0-9]+)$") { |req, m|
         let id = m.named("id");
         let form = uri::decode_qs(req.body);
 
@@ -137,6 +137,18 @@ fn main() {
           }
         }
     }
+
+    mre.router.add("POST", "^/posts/(?<id>[-_A-Za-z0-9]+)/delete$") { |req, m|
+        alt post::find(es, m.named("id")) {
+          none { http_404(req) }
+          some(post) {
+            post.delete(es);
+
+            redirect(req, "/")
+          }
+        }
+    }
+
 
     mre.run();
 
