@@ -2,6 +2,10 @@ import std::map::{hashmap, str_hash};
 import std::json;
 import elasticsearch::{client, search_builder, index_builder, json_dict_builder};
 
+export post;
+export find;
+export all;
+
 type post = {
     id: str,
     version: option<uint>,
@@ -67,9 +71,9 @@ fn all(es: elasticsearch::client) -> [post] {
 
 impl post for post {
     fn title() -> str {
-        self.source.find("title").map_default("", { |title|
+        self.source.find("title").map_default("") { |title|
             alt check title { json::string(title) { title } }
-        })
+        }
     }
 
     fn set_title(title: str) {

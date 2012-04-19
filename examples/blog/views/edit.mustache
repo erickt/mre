@@ -1,6 +1,5 @@
 {{> top}}
 
-{{# post}}
 <form action="/posts/{{_id}}" method="post">
 	<label>Title:</label>
 	<input type="text" name="title" value="{{title}}">
@@ -18,6 +17,5 @@
 <form action="/posts/{{_id}}/delete" method="post">
 	<input type="submit" value="delete">
 </form>
-{{/ post}}
 
 {{> bottom}}

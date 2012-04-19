@@ -9,13 +9,29 @@ import mongrel2::{connection, request};
 import mre::mre;
 import mre::response::{response, http_200, http_400, http_404, redirect};
 import mu_context = mustache::context;
+import mustache::to_mustache;
 import zmq_context = zmq::context;
 import zmq::error;
 
-import post::post;
+import post::{post};
+
+// FIXME: move after https://github.com/mozilla/rust/issues/2242 is fixed.
+impl of to_mustache for post {
+    fn to_mustache() -> mustache::data {
+        hash_from_strs([
+            ("_id", self.id),
+            ("title", self.title()),
+            ("body", self.body())
+        ]).to_mustache()
+    }
+}
 
 fn render_200(req: request, mu: mustache::context, path: str,
-              data: hashmap<str, mustache::data>) -> response {
+              data: mustache::data) -> response {
+    let data = alt check data {
+        mustache::map(m) { m }
+    };
+
     let template = mu.render_file(path, data);
     http_200(req, str::bytes(template))
 }
@@ -38,43 +54,27 @@ fn main() {
 
     let mre = mre::mre(m2, io::stdout());
 
-    fn post_to_mustache(post: post::post) -> mustache::data {
-        mustache::map(hash_from_strs([
-            ("post", mustache::map(hash_from_strs([
-                ("_id", mustache::str(post.id)),
-                ("title", mustache::str(post.title())),
-                ("body", mustache::str(post.body()))
-            ])))
-        ]))
-    }
-
     mre.router.add("GET", "^/$") { |req, _m|
-        let posts = post::all(es).map(post_to_mustache);
+        let posts = post::all(es);
 
         render_200(req, mu, "index", hash_from_strs([
-            ("posts", mustache::vec(posts))
-        ]))
+            ("posts", posts.to_mustache())
+        ]).to_mustache())
     }
 
     mre.router.add("GET", "^/posts/new$") { |req, _m|
         let post = post::post("");
 
-        let m = alt check post_to_mustache(post) {
-          mustache::map(m) { m }
-        };
+        #error("%?", post.to_mustache());
 
-        render_200(req, mu, "new", m)
+        render_200(req, mu, "new", post.to_mustache())
     }
 
     mre.router.add("GET", "^/posts/(?<id>[-_A-Za-z0-9]+)$") { |req, m|
         alt post::find(es, m.named("id")) {
           none { http_404(req) }
           some(post) {
-            let m = alt check post_to_mustache(post) {
-              mustache::map(m) { m }
-            };
-
-            render_200(req, mu, "show", m)
+            render_200(req, mu, "show", post.to_mustache())
           }
         }
     }
@@ -83,11 +83,7 @@ fn main() {
         alt post::find(es, m.named("id")) {
           none { http_404(req) }
           some(post) {
-            let m = alt check post_to_mustache(post) {
-              mustache::map(m) { m }
-            };
-
-            render_200(req, mu, "edit", m)
+            render_200(req, mu, "edit", post.to_mustache())
           }
         }
     }
@@ -111,7 +107,6 @@ fn main() {
           some(id) { redirect(req, "/posts/" + id) }
         }
     }
-
 
     mre.router.add("POST", "^/posts/(?<id>[-_A-Za-z0-9]+)$") { |req, m|
         let id = m.named("id");
@@ -148,7 +143,6 @@ fn main() {
           }
         }
     }
-
 
     mre.run();
 
