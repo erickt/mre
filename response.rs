@@ -109,8 +109,8 @@ fn http_307(req: request) -> response {
     response(req, 305u, "Temporary Redirect", [])
 }
 
-fn http_400(req: request) -> response {
-    response(req, 400u, "Bad Request", [])
+fn http_400(req: request, body: [u8]) -> response {
+    response(req, 400u, "Bad Request", body)
 }
 
 fn http_401(req: request) -> response {
@@ -181,8 +181,8 @@ fn http_417(req: request) -> response {
     response(req, 417u, "Expectation Failed", [])
 }
 
-fn http_500(req: request) -> response {
-    response(req, 500u, "Internal Server Error", [])
+fn http_500(req: request, body: [u8]) -> response {
+    response(req, 500u, "Internal Server Error", body)
 }
 
 fn http_501(req: request) -> response {

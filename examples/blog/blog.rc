@@ -10,3 +10,12 @@ use pcre;
 mod app;
 mod models;
 mod routes;
+
+import mre::response::{
+    response,
+    http_200,
+    http_400,
+    http_404,
+    http_500,
+    redirect
+};

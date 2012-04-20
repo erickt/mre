@@ -25,7 +25,7 @@ impl mre for mre {
             let rep = alt req.headers.find("METHOD") {
               none {
                 // Error out the request if we didn't get a method.
-                response::http_400(req)
+                response::http_400(req, str::bytes("missing method"))
               }
 
               some(methods) {

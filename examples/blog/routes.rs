@@ -1,3 +1,4 @@
+import result::{ok, err};
 import models::{post, comment};
 
 // FIXME: move after https://github.com/mozilla/rust/issues/2242 is fixed.
@@ -32,6 +33,7 @@ impl render_200 for app {
 }
 
 fn routes(app: app::app) {
+    // Show all the posts.
     app.get("^/$") { |req, _m|
         let posts = models::post::all(app.es);
 
@@ -41,22 +43,9 @@ fn routes(app: app::app) {
         ]).to_mustache())
     }
 
+    // Create a post.
     app.get("^/posts/new$") { |req, _m|
-        app.render_200(req, "new", post::post(""))
-    }
-
-    app.get("^/posts/(?<id>[-_A-Za-z0-9]+)$") { |req, m|
-        alt models::post::find(app.es, m.named("id")) {
-          none { http_404(req) }
-          some(post) { app.render_200(req, "show", post) }
-        }
-    }
-
-    app.get("^/posts/(?<id>[-_A-Za-z0-9]+)/edit$") { |req, m|
-        alt models::post::find(app.es, m.named("id")) {
-          none { http_404(req) }
-          some(post) { app.render_200(req, "edit", post) }
-        }
+        app.render_200(req, "post_new", post::post(""))
     }
 
     app.post("^/posts$") { |req, _m|
@@ -74,16 +63,49 @@ fn routes(app: app::app) {
         }
 
         alt post.save(app.es) {
-          none { http_400(req) }
-          some(id) { redirect(req, "/posts/" + id) }
+          ok(id) { redirect(req, "/posts/" + id) }
+          err(e) { http_500(req, str::bytes(e)) }
+        }
+    }
+
+    // Show a post.
+    app.get("^/posts/(?<id>[-_A-Za-z0-9]+)$") { |req, m|
+        let id = m.named("id");
+
+        alt models::post::find(app.es, id) {
+          none { http_404(req) }
+          some(post) {
+            let comments = post.find_comments(app.es);
+
+            app.render_200(req, "post_show", hash_from_strs([
+                ("post_id", id.to_mustache()),
+                ("post", post.to_mustache()),
+                ("comments", comments.to_mustache())
+            ]).to_mustache())
+          }
+        }
+    }
+
+    // Edit a post.
+    app.get("^/posts/(?<id>[-_A-Za-z0-9]+)/edit$") { |req, m|
+        let id = m.named("id");
+
+        alt models::post::find(app.es, id) {
+          none { http_404(req) }
+          some(post) {
+            app.render_200(req, "post_edit", hash_from_strs([
+                ("post_id", id.to_mustache()),
+                ("post", post.to_mustache())
+            ]).to_mustache())
+          }
         }
     }
 
     app.post("^/posts/(?<id>[-_A-Za-z0-9]+)$") { |req, m|
-        let id = m.named("id");
+        let post_id = m.named("id");
         let form = uri::decode_qs(req.body);
 
-        alt models::post::find(app.es, id) {
+        alt models::post::find(app.es, post_id) {
           none { http_404(req) }
           some(post) {
             alt form.find("title") {
@@ -97,13 +119,14 @@ fn routes(app: app::app) {
             }
 
             alt post.save(app.es) {
-              none { http_400(req) }
-              some(id) { redirect(req, "/posts/" + id) }
+              ok(id) { redirect(req, "/posts/" + post_id) }
+              err(e) { http_500(req, str::bytes(e)) }
             }
           }
         }
     }
 
+    // Delete a post.
     app.post("^/posts/(?<id>[-_A-Za-z0-9]+)/delete$") { |req, m|
         alt models::post::find(app.es, m.named("id")) {
           none { http_404(req) }
@@ -111,6 +134,81 @@ fn routes(app: app::app) {
             post.delete(app.es);
 
             redirect(req, "/")
+          }
+        }
+    }
+
+    // Create a comment.
+    app.post("^/posts/(?<id>[-_A-Za-z0-9]+)/comments$") { |req, m|
+        let id = m.named("id");
+        let form = uri::decode_qs(req.body);
+
+        alt models::post::find(app.es, id) {
+          none { http_404(req) }
+          some(post) {
+            let comment = models::comment::comment(id, "");
+
+            alt form.find("body") {
+              some(body) { comment.set_body(body[0]) }
+              none {}
+            }
+
+            alt comment.save(app.es) {
+              ok(_) { redirect(req, "/posts/" + id) }
+              err(e){ http_500(req, str::bytes(e)) }
+            }
+          }
+        }
+    }
+
+    // Edit a comment.
+    app.get("^/posts/(?<post_id>[-_A-Za-z0-9]+)/comments/(?<id>[-_A-Za-z0-9]+)/edit$") { |req, m|
+        let post_id = m.named("post_id");
+        let comment_id = m.named("id");
+
+        alt models::comment::find(app.es, post_id, comment_id) {
+          none { http_404(req) }
+          some(comment) {
+            app.render_200(req, "comment_edit", hash_from_strs([
+                ("post_id", post_id.to_mustache()),
+                ("comment", comment.to_mustache())
+            ]).to_mustache())
+          }
+        }
+    }
+
+    app.post("^/posts/(?<post_id>[-_A-Za-z0-9]+)/comments/(?<id>[-_A-Za-z0-9]+)$") { |req, m|
+        let post_id = m.named("post_id");
+        let comment_id = m.named("id");
+        let form = uri::decode_qs(req.body);
+
+        alt models::comment::find(app.es, post_id, comment_id) {
+          none { http_404(req) }
+          some(comment) {
+            alt form.find("body") {
+              some(body) { comment.set_body(body[0]) }
+              none {}
+            }
+
+            alt comment.save(app.es) {
+              ok(id) { redirect(req, "/posts/" + post_id) }
+              err(e) { http_500(req, str::bytes(e)) }
+            }
+          }
+        }
+    }
+
+    // Delete a comment.
+    app.post("^/posts/(?<post_id>[-_A-Za-z0-9]+)/comments/(?<id>[-_A-Za-z0-9]+)/delete$") { |req, m|
+        let post_id = m.named("post_id");
+        let comment_id = m.named("id");
+
+        alt models::comment::find(app.es, post_id, comment_id) {
+          none { http_404(req) }
+          some(comment) {
+            comment.delete(app.es);
+
+            redirect(req, "/posts/" + post_id)
           }
         }
     }

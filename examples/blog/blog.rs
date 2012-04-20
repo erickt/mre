@@ -7,7 +7,6 @@ import std::json;
 import elasticsearch::{client, search_builder, index_builder, json_dict_builder};
 import mongrel2::{connection, request};
 import mre::mre;
-import mre::response::{response, http_200, http_400, http_404, redirect};
 import mu_context = mustache::context;
 import mustache::to_mustache;
 import zmq_context = zmq::context;

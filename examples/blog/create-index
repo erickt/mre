@@ -1,0 +1,29 @@
+#!/bin/sh
+
+curl -XDELETE "http://localhost:9200/blog"
+
+curl -XPOST "http://localhost:9200/blog" -d '{
+	"settings": {
+		"index.number_of_shards": 1,
+		"index.number_of_replicas": 0
+	},
+	"mappings": {
+		"post": {
+			"properties": {
+				"title": {"type": "string"},
+				"body": {"type": "string"}
+			}
+		},
+		"comment": {
+			"_parent": { "type": "post" },
+			"properties": {
+				"body": {"type": "string"}
+			}
+		}
+	}
+}'
+
+curl -XPOST "http://localhost:9200/blog/post" -d '{
+	"title": "hello world",
+	"body": "insert blog post here"
+}'

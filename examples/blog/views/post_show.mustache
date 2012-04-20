@@ -1,0 +1,25 @@
+{{> top}}
+<a href="/">home</a>
+
+{{# post}}
+	{{> post}}
+{{/ post}}
+
+<h3>Comments:</h3>
+
+{{# comments}}
+	{{> comment}}
+{{/ comments}}
+
+{{# post}}
+	<form action="/posts/{{post_id}}/comments" method="post">
+		<label>Comment:</label>
+		<textarea type="text" name="body" rows="10" cols="100"></textarea>
+
+		<br>
+
+		<input type="submit" value="add comment">
+	</form>
+{{/ post}}
+
+{{> bottom}}

@@ -1,0 +1,18 @@
+{{> top}}
+
+{{# comment}}
+	<form action="/posts/{{post_id}}/comments/{{_id}}" method="post">
+		<label>Body:</label>
+		<textarea type="text" name="body" rows="10" cols="100">{{body}}</textarea>
+
+		<br>
+
+		<input type="submit" value="save">
+	</form>
+
+	<form action="/posts/{{post_id}}/comments/{{_id}}/delete" method="post">
+		<input type="submit" value="delete">
+	</form>
+{{/ comment}}
+
+{{> bottom}}
