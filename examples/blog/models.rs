@@ -2,6 +2,7 @@ import elasticsearch::{
     client,
     index_builder,
     search_builder,
+    delete_builder,
     delete_by_query_builder,
     json_dict_builder
 };
@@ -165,7 +166,9 @@ impl post for post::t {
     fn delete(es: client) {
         if self._id != "" {
             comment::delete_by_post(es, self._id);
-            es.delete(self._index, self._type, self._id);
+            es.prepare_delete(self._index, self._type, self._id)
+                .set_refresh(true)
+                .execute();
         }
     }
 
@@ -235,7 +238,9 @@ impl comment for comment::t {
 
     fn delete(es: client) {
         if self._id != "" {
-            es.delete(self._index, self._type, self._id);
+            es.prepare_delete(self._index, self._type, self._id)
+                .set_refresh(true)
+                .execute();
         }
     }
 }
