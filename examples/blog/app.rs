@@ -1,3 +1,7 @@
+import mre::mre;
+import mre::response::response;
+import zmq::context;
+
 type app = {
     zmq: zmq::context,
     m2: mongrel2::connection,
@@ -28,11 +32,11 @@ fn app() -> app {
 }
 
 impl app for app {
-    fn get(regex: str, f: fn@(mongrel2::request, pcre::match) -> mre::response::response) {
+    fn get(regex: str, f: fn@(request, pcre::match) -> mre::response::response) {
         self.mre.router.add("GET", regex, f)
     }
 
-    fn post(regex: str, f: fn@(mongrel2::request, pcre::match) -> mre::response::response) {
+    fn post(regex: str, f: fn@(request, pcre::match) -> mre::response::response) {
         self.mre.router.add("POST", regex, f)
     }
 

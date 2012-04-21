@@ -1,6 +1,3 @@
-import result::{result, ok, err};
-import std::map::{hashmap, str_hash};
-import std::json;
 import elasticsearch::{
     client,
     index_builder,
@@ -79,7 +76,7 @@ fn rep_to_models(rep: elasticsearch::response) -> [model] {
     }
 }
 
-fn find_model(es: elasticsearch::client, index: str, typ: str, id: str) -> option<model> {
+fn find_model(es: client, index: str, typ: str, id: str) -> option<model> {
     let rep = es.get(index, typ, id);
 
     let hit = alt check rep.body { json::dict(hit) { hit } };
@@ -90,7 +87,7 @@ fn find_model(es: elasticsearch::client, index: str, typ: str, id: str) -> optio
     }
 }
 
-fn all_models(es: elasticsearch::client, index: str, typ: str) -> [model] {
+fn all_models(es: client, index: str, typ: str) -> [model] {
     let rep = es.prepare_search()
         .set_indices([index])
         .set_types([typ])
@@ -103,7 +100,7 @@ fn all_models(es: elasticsearch::client, index: str, typ: str) -> [model] {
     rep_to_models(rep)
 }
 
-fn save_model(es: elasticsearch::client, model: model) -> result<str, str> {
+fn save_model(es: client, model: model) -> result<str, str> {
     let index = es.prepare_index(model._index, model._type)
         .set_source(model.source)
         .set_refresh(true);
@@ -131,11 +128,11 @@ mod post {
 
     fn post(id: str) -> t { t(model("blog", "post", id)) }
 
-    fn find(es: elasticsearch::client, id: str) -> option<t> {
+    fn find(es: client, id: str) -> option<t> {
         find_model(es, "blog", "post", id).map { |p| t(p) }
     }
 
-    fn all(es: elasticsearch::client) -> [t] {
+    fn all(es: client) -> [t] {
         all_models(es, "blog", "post").map { |p| t(p) }
     }
 }
@@ -161,18 +158,18 @@ impl post for post::t {
         self.source.insert("body", json::string(body));
     }
 
-    fn save(es: elasticsearch::client) -> result<str, str> {
+    fn save(es: client) -> result<str, str> {
         save_model(es, *self)
     }
 
-    fn delete(es: elasticsearch::client) {
+    fn delete(es: client) {
         if self._id != "" {
             comment::delete_by_post(es, self._id);
             es.delete(self._index, self._type, self._id);
         }
     }
 
-    fn find_comments(es: elasticsearch::client) -> [comment::t] {
+    fn find_comments(es: client) -> [comment::t] {
         comment::find_by_post(es, self._id)
     }
 }
@@ -184,13 +181,13 @@ mod comment {
         t({ _parent: some(post_id) with model("blog", "comment", id) })
     }
 
-    fn find(es: elasticsearch::client, post_id: str, id: str) -> option<t> {
+    fn find(es: client, post_id: str, id: str) -> option<t> {
         find_model(es, "blog", "comment", id).map { |model|
             t({ _parent: some(post_id) with model })
         }
     }
 
-    fn find_by_post(es: elasticsearch::client, post_id: str) -> [t] {
+    fn find_by_post(es: client, post_id: str) -> [t] {
         let rep = es.prepare_search()
             .set_indices(["blog"])
             .set_types(["comment"])
@@ -207,7 +204,7 @@ mod comment {
         }
     }
 
-    fn delete_by_post(es: elasticsearch::client, post_id: str) {
+    fn delete_by_post(es: client, post_id: str) {
         let rep = es.prepare_delete_by_query()
             .set_indices(["blog"])
             .set_types(["comment"])
@@ -232,11 +229,11 @@ impl comment for comment::t {
         self.source.insert("body", json::string(body));
     }
 
-    fn save(es: elasticsearch::client) -> result<str, str> {
+    fn save(es: client) -> result<str, str> {
         save_model(es, *self)
     }
 
-    fn delete(es: elasticsearch::client) {
+    fn delete(es: client) {
         if self._id != "" {
             es.delete(self._index, self._type, self._id);
         }

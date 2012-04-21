@@ -1,4 +1,13 @@
-import result::{ok, err};
+import mre::response::{
+    response,
+    http_200,
+    http_400,
+    http_404,
+    http_500,
+    redirect
+};
+import mustache::context;
+
 import models::{post, comment};
 
 // FIXME: move after https://github.com/mozilla/rust/issues/2242 is fixed.

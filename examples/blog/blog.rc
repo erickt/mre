@@ -7,15 +7,16 @@ use elasticsearch;
 use uri;
 use pcre;
 
+import io::{reader, reader_util};
+import result::{result, ok, err, extensions};
+import std::json;
+import std::json::json;
+import std::map::{hashmap, str_hash, hash_from_strs};
+
+import mongrel2::request;
+import mustache::to_mustache;
+import zmq::error;
+
 mod app;
 mod models;
 mod routes;
-
-import mre::response::{
-    response,
-    http_200,
-    http_400,
-    http_404,
-    http_500,
-    redirect
-};
