@@ -52,8 +52,9 @@ fn router() -> router {
 mod tests {
     import pcre::match;
 
-    fn check_path(router: router, path: str, f: handler, captures: [str]) {
-        let (handler, m) = option::get(router.find(path));
+    fn check_path(router: router, method: str, path: str, f: handler,
+                  captures: [str]) {
+        let (handler, m) = router.find(method, path).get();
         assert handler == f;
         assert m.substrings() == captures;
     }
@@ -61,8 +62,8 @@ mod tests {
     #[test]
     fn test_router() {
         let router = router();
-        router.find("") == none;
-        router.find("/foo/bar/baz") == none;
+        router.find("GET", "") == none;
+        router.find("GET", "/foo/bar/baz") == none;
 
         let a = { |req, _m| response::http_200(req, []) };
         let b = { |req, _m| response::http_200(req, []) };
@@ -71,19 +72,19 @@ mod tests {
         let z = { |req, _m| response::http_200(req, []) };
 
         router.add_patterns([
-            ("^/$", a),
-            ("^/foo$", b),
-            ("^/foo/bar/baz$", c),
-            ("^/([^\\/]+)/(.*)$", d),
-            ("", z)
+            ("GET", "^/$", a),
+            ("GET", "^/foo$", b),
+            ("GET", "^/foo/bar/baz$", c),
+            ("GET", "^/([^\\/]+)/(.*)$", d),
+            ("GET", "", z)
         ]);
 
-        check_path(router, "/", a, []);
-        check_path(router, "/foo", b, []);
-        check_path(router, "/foo/bar/baz", c, []);
-        check_path(router, "/a12/b34", d, ["a12", "b34"]);
-        check_path(router, "/a12/b34/c/d", d, ["a12", "b34/c/d"]);
-        check_path(router, "lalala", z, []);
+        check_path(router, "GET", "/", a, []);
+        check_path(router, "GET", "/foo", b, []);
+        check_path(router, "GET", "/foo/bar/baz", c, []);
+        check_path(router, "GET", "/a12/b34", d, ["a12", "b34"]);
+        check_path(router, "GET", "/a12/b34/c/d", d, ["a12", "b34/c/d"]);
+        check_path(router, "GET", "lalala", z, []);
 
 
     }

@@ -6,6 +6,7 @@ use mustache;
 use elasticsearch;
 use uri;
 use pcre;
+use crypto;
 
 import io::{reader, reader_util};
 import result::{result, ok, err, extensions};
@@ -13,10 +14,14 @@ import std::json;
 import std::json::json;
 import std::map::{hashmap, str_hash, hash_from_strs};
 
+import mre::{model, user};
 import mongrel2::request;
 import mustache::to_mustache;
 import zmq::error;
 
+import elasticsearch::{search_builder, json_dict_builder};
+
 mod app;
-mod models;
+mod post;
+mod comment;
 mod routes;

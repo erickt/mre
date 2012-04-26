@@ -7,7 +7,8 @@ type app = {
     m2: mongrel2::connection,
     mre: mre::mre,
     es: elasticsearch::client,
-    mu: mustache::context
+    mu: mustache::context,
+    password_hasher: mre::auth::hasher
 };
 
 fn app() -> app {
@@ -28,7 +29,14 @@ fn app() -> app {
 
     let mu = mustache::context("views", ".mustache");
 
-    { zmq: zmq, m2: m2, mre: mre, es: es, mu: mu }
+    {
+        zmq: zmq,
+        m2: m2,
+        mre: mre,
+        es: es,
+        mu: mu,
+        password_hasher: mre::auth::default_pbkdf2_sha1()
+    }
 }
 
 impl app for app {

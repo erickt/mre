@@ -1,7 +1,7 @@
 {{> top}}
 
 {{# comment}}
-	<form action="/posts/{{post_id}}/comments/{{_id}}" method="post">
+	<form action="/posts/{{post_id}}/comments/{{comment_id}}" method="post">
 		<label>Body:</label>
 		<textarea type="text" name="body" rows="10" cols="100">{{body}}</textarea>
 
@@ -10,7 +10,7 @@
 		<input type="submit" value="save">
 	</form>
 
-	<form action="/posts/{{post_id}}/comments/{{_id}}/delete" method="post">
+	<form action="/posts/{{post_id}}/comments/{{comment_id}}/delete" method="post">
 		<input type="submit" value="delete">
 	</form>
 {{/ comment}}

@@ -8,6 +8,19 @@ use mongrel2;
 use mustache;
 use pcre;
 use zmq;
+use crypto;
+use elasticsearch;
 
 mod response;
 mod router;
+mod base64;
+mod auth;
+mod model;
+mod user;
+
+import io::{reader, reader_util, writer, writer_util};
+import result::{result, ok, err};
+
+import std::map::{hashmap, str_hash};
+import std::json;
+import std::json::json;
