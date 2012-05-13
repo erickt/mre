@@ -23,9 +23,16 @@ impl mre for mre {
     fn run() {
         loop {
             let req = self.m2.recv();
-
             let rep = response::response(self.m2, req);
-            let req = request::request(req);
+
+            let req = alt request::request(req) {
+              ok(req) { req }
+              err(e) {
+                // Ignore this request if it's malformed.
+                rep.http_400(str::bytes(e));
+                cont;
+              }
+            };
 
             self.middleware.wrap(req, rep);
 

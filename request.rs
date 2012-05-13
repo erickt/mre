@@ -1,9 +1,20 @@
 type request = {
     req: mongrel2::request,
+    cookies: hashmap<str, cookie::cookie>
 };
 
-fn request(req: mongrel2::request) -> @request {
-    @{ req: req }
+fn request(req: mongrel2::request) -> result<@request, str> {
+    let cookies = alt req.headers.find("cookie") {
+      none { str_hash() }
+      some(cookies) {
+        alt cookie::parse_headers(cookies) {
+          ok(cookies) { cookies }
+          err(e) { ret err(e); }
+        }
+      }
+    };
+
+    ok(@{ req: req, cookies: cookies })
 }
 
 impl request for @request {

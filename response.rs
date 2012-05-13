@@ -1,5 +1,9 @@
+import cookie::cookie;
+
 type response = {
     mut code: uint,
+    mut status: str,
+    headers: hashmap<str, [str]>,
     mut reply: fn@([u8]),
     mut end: fn@(),
 };
@@ -7,21 +11,70 @@ type response = {
 fn response(m2: mongrel2::connection, req: mongrel2::request) -> @response {
     @{
         mut code: 200u,
+        mut status: "OK",
+        headers: str_hash(),
         mut reply: { |msg| m2.reply(req, msg); },
         mut end: { || m2.reply(req, str::bytes("")); },
     }
 }
 
 impl response for @response {
-    fn reply_status(code: uint, status: str) {
+    fn set_status(code: uint, status: str) {
         self.code = code;
-        self.reply(str::bytes(#fmt("HTTP/1.1 %u %s\r\n", code, status)));
+        self.status = status;
     }
 
-    fn reply_headers(headers: hashmap<str, [str]>) {
-        let mut rep = [];
+    fn find_headers(key: str) -> option<[str]> {
+        self.headers.find(key)
+    }
 
-        for headers.each { |key, values|
+    fn find_header(key: str) -> option<str> {
+        self.find_headers(key).chain { |values|
+            if values.len() == 0u {
+                none
+            } else {
+                some(values[0])
+            }
+        }
+    }
+
+    fn set_header(name: str, value: str) {
+        let mut values = alt self.headers.find(name) {
+          none { [] }
+          some(values) { values }
+        };
+
+        vec::push(values, value);
+
+        self.headers.insert(name, values);
+    }
+
+    fn set_cookie(cookie: cookie::cookie) {
+        let header = alt cookie.to_header() {
+          ok(header) { header }
+          err(e) { fail e; }
+        };
+
+        self.set_header("Set-Cookie", header);
+    }
+
+    fn clear_cookie(name: str) {
+        let cookie = cookie::cookie(name, "");
+        cookie.max_age = some(0u);
+        self.set_cookie(cookie);
+    }
+
+    fn set_len(len: uint) {
+        self.set_header("Content-Length", uint::to_str(len, 10u));
+    }
+
+    fn reply_head() {
+        let mut rep = [];
+        rep += str::bytes(#fmt("HTTP/1.1 %u ", self.code));
+        rep += str::bytes(self.status);
+        rep += str::bytes("\r\n");
+
+        for self.headers.each { |key, values|
             let lines = vec::map(values) { |value|
                 str::bytes(key + ": " + value + "\r\n")
             };
@@ -33,25 +86,17 @@ impl response for @response {
         self.reply(rep);
     }
 
-    fn reply_http_headers(code: uint,
-                          status: str,
-                          headers: hashmap<str, [str]>,
-                          body: [u8]) {
-        self.reply_status(code, status);
-        self.reply_headers(headers);
+    fn reply_http(code: uint, status: str, body: [u8]) {
+        self.set_status(code, status);
+        self.set_len(body.len());
+        self.reply_head();
         self.reply(body);
         self.end();
     }
 
-    fn reply_http(code: uint, status: str, body: [u8]) {
-        self.reply_http_headers(code, status, str_hash(), body)
-    }
-
     fn redirect(location: str) {
-        let headers = str_hash();
-        headers.insert("Location", [location]);
-
-        self.reply_http_headers(302u, "Found", headers, [])
+        self.set_header("Location", location);
+        self.reply_http(302u, "Found", [])
     }
 
     fn http_100() {
@@ -62,13 +107,8 @@ impl response for @response {
         self.reply_http(101u, "Switching Protocols", [])
     }
 
-    fn http_200_headers(headers: hashmap<str, [str]>,
-                        body: [u8]) {
-        self.reply_http_headers(200u, "OK", headers, body)
-    }
-
     fn http_200(body: [u8]) {
-        self.http_200_headers(str_hash(), body)
+        self.reply_http(200u, "OK", body)
     }
 
     fn http_201() {

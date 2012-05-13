@@ -19,14 +19,6 @@ impl middleware for middleware {
 
 fn logger(logger: io::writer) -> wrapper {
     { |req: @request, rep: @response|
-        let len = @mut 0u;
-
-        let old_reply = rep.reply;
-        rep.reply = { |body|
-            *len += body.len();
-            old_reply(body);
-        };
-
         let old_end = rep.end;
         rep.end = { ||
             let address = alt req.find_header("x-forwarded-for") {
@@ -39,6 +31,11 @@ fn logger(logger: io::writer) -> wrapper {
               some(method) { method }
             };
 
+            let len = alt rep.find_header("Content-Length") {
+              none { "-" }
+              some(len) { len }
+            };
+
             logger.write_line(#fmt("%s - %s [%s] \"%s %s\" %u %s",
                 address,
                 "-",
@@ -46,7 +43,7 @@ fn logger(logger: io::writer) -> wrapper {
                 method,
                 req.path(),
                 rep.code,
-                if *len == 0u { "-" } else { #fmt("%u", *len) }));
+                len));
 
             old_end();
         };
