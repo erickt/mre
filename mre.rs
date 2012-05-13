@@ -5,27 +5,31 @@ import request::request;
 import response::response;
 import middleware::middleware;
 
-type mre = {
+type mre<T> = {
     m2: mongrel2::connection,
-    router: router::router,
-    middleware: middleware::middleware,
+    router: router::router<T>,
+    middleware: middleware::middleware<T>,
+    mk_data: fn@() -> T,
 };
 
-fn mre(m2: mongrel2::connection, middleware: middleware::middleware) -> mre {
+fn mre<T: copy>(m2: mongrel2::connection,
+          middleware: middleware::middleware<T>,
+          mk_data: fn@() -> T) -> mre<T> {
     {
         m2: m2,
         router: router::router(),
         middleware: middleware,
+        mk_data: mk_data,
     }
 }
 
-impl mre for mre {
+impl mre<T: copy> for mre<T> {
     fn run() {
         loop {
             let req = self.m2.recv();
             let rep = response::response(self.m2, req);
 
-            let req = alt request::request(req) {
+            let req = alt request::request(req, self.mk_data()) {
               ok(req) { req }
               err(e) {
                 // Ignore this request if it's malformed.

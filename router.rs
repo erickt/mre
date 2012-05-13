@@ -1,36 +1,36 @@
 import request::request;
 import response::response;
 
-type handler = fn@(@request, @response, pcre::match);
+type handler<T> = fn@(@request<T>, @response, pcre::match);
 
-iface router {
-    fn add(method: str, pattern: str, handler: handler);
-    fn add_patterns([(str, str, handler)]);
-    fn find(method: str, path: str) -> option<(handler, pcre::match)>;
+iface router<T> {
+    fn add(method: str, pattern: str, handler: handler<T>);
+    fn add_patterns([(str, str, handler<T>)]);
+    fn find(method: str, path: str) -> option<(handler<T>, pcre::match)>;
 }
 
-fn router() -> router {
+fn router<T>() -> router<T> {
     type routerstate = {
-        mut routes: [(str, @pcre::pcre, handler)],
+        mut routes: [(str, @pcre::pcre, handler<T>)],
     };
 
     let router: routerstate = {
         mut routes: []
     };
 
-    impl of router for routerstate {
-        fn add(method: str, pattern: str, handler: handler) {
+    impl <T> of router<T> for routerstate {
+        fn add(method: str, pattern: str, handler: handler<T>) {
             self.routes += [(method, @pcre::mk_pcre(pattern), handler)];
         }
 
-        fn add_patterns(items: [(str, str, handler)]) {
+        fn add_patterns(items: [(str, str, handler<T>)]) {
             vec::iter(items) { |item|
                 let (method, pattern, handler) = item;
                 self.add(method, pattern, handler)
             };
         }
 
-        fn find(method: str, path: str) -> option<(handler, pcre::match)> {
+        fn find(method: str, path: str) -> option<(handler<T>, pcre::match)> {
             for self.routes.each() { |item|
                 let (meth, regex, handler) = item;
 
@@ -45,7 +45,7 @@ fn router() -> router {
         }
     }
 
-    router as router
+    router as router::<T>
 }
 
 #[cfg(test)]

@@ -19,6 +19,7 @@ mod model;
 mod request;
 mod response;
 mod router;
+mod session;
 mod user;
 
 import io::{reader, reader_util, writer, writer_util};
