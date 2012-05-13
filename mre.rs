@@ -1,6 +1,7 @@
 import std::time;
 import std::time::tm;
 
+import router::router;
 import request::request;
 import response::response;
 import middleware::middleware;

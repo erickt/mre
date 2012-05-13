@@ -3,49 +3,39 @@ import response::response;
 
 type handler = fn@(@request, @response, pcre::match);
 
-iface router {
-    fn add(method: str, pattern: str, handler: handler);
-    fn add_patterns([(str, str, handler)]);
-    fn find(method: str, path: str) -> option<(handler, pcre::match)>;
-}
+type router = {
+    mut routes: [(str, @pcre::pcre, handler)],
+};
 
 fn router() -> router {
-    type routerstate = {
-        mut routes: [(str, @pcre::pcre, handler)],
-    };
+    { mut routes: [] }
+}
 
-    let router: routerstate = {
-        mut routes: []
-    };
-
-    impl of router for routerstate {
-        fn add(method: str, pattern: str, handler: handler) {
-            self.routes += [(method, @pcre::mk_pcre(pattern), handler)];
-        }
-
-        fn add_patterns(items: [(str, str, handler)]) {
-            vec::iter(items) { |item|
-                let (method, pattern, handler) = item;
-                self.add(method, pattern, handler)
-            };
-        }
-
-        fn find(method: str, path: str) -> option<(handler, pcre::match)> {
-            for self.routes.each() { |item|
-                let (meth, regex, handler) = item;
-
-                if method == meth {
-                    let m = (*regex).match(path);
-                    if m.matched() {
-                        ret some((handler, m));
-                    }
-                }
-            }
-            none
-        }
+impl router for router {
+    fn add(method: str, pattern: str, handler: handler) {
+        self.routes += [(method, @pcre::mk_pcre(pattern), handler)];
     }
 
-    router as router
+    fn add_patterns(items: [(str, str, handler)]) {
+        vec::iter(items) { |item|
+            let (method, pattern, handler) = item;
+            self.add(method, pattern, handler)
+        };
+    }
+
+    fn find(method: str, path: str) -> option<(handler, pcre::match)> {
+        for self.routes.each() { |item|
+            let (meth, regex, handler) = item;
+
+            if method == meth {
+                let m = (*regex).match(path);
+                if m.matched() {
+                    ret some((handler, m));
+                }
+            }
+        }
+        none
+    }
 }
 
 #[cfg(test)]

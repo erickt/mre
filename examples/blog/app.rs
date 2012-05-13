@@ -1,4 +1,5 @@
 import mre::mre;
+import mre::router::router;
 import mre::response::response;
 import zmq::context;
 
