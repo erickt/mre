@@ -1,7 +1,7 @@
-import mongrel2::request;
+import request::request;
 import response::response;
 
-type handler = fn@(request, pcre::match) -> response;
+type handler = fn@(@request, @response, pcre::match);
 
 iface router {
     fn add(method: str, pattern: str, handler: handler);

@@ -1,16 +1,22 @@
 import std::time;
 import std::time::tm;
 
-import mongrel2::request;
+import request::request;
+import response::response;
+import middleware::middleware;
 
 type mre = {
     m2: mongrel2::connection,
     router: router::router,
-    logger: io::writer,
+    middleware: middleware::middleware,
 };
 
-fn mre(m2: mongrel2::connection, logger: io::writer) -> mre {
-    { m2: m2, router: router::router(), logger: logger }
+fn mre(m2: mongrel2::connection, middleware: middleware::middleware) -> mre {
+    {
+        m2: m2,
+        router: router::router(),
+        middleware: middleware,
+    }
 }
 
 impl mre for mre {
@@ -18,57 +24,28 @@ impl mre for mre {
         loop {
             let req = self.m2.recv();
 
+            let rep = response::response(self.m2, req);
+            let req = request::request(req);
+
+            self.middleware.wrap(req, rep);
+
+            // Ignore close requests for now.
             if req.is_disconnect() { cont; }
 
-            let rep = alt req.headers.find("METHOD") {
+            alt req.find_header("METHOD") {
               none {
                 // Error out the request if we didn't get a method.
-                response::http_400(req, str::bytes("missing method"))
+                rep.http_400(str::bytes("missing method"))
               }
 
-              some(methods) {
-                let rep = alt self.router.find(methods[0], req.path) {
-                  none { response::http_404(req) }
-                  some((handler, m)) { handler(req, m) }
-                };
+              some(method) {
+                alt self.router.find(method, req.path()) {
+                  none { rep.http_404() }
 
-                rep
+                  some((handler, m)) { handler(req, rep, m) }
+                };
               }
             };
-
-            self.log_response(rep);
-
-            self.m2.reply_http(
-                rep.request,
-                rep.code,
-                rep.status,
-                rep.headers,
-                rep.body);
         }
-    }
-
-    fn log_response(rep: response::response) {
-        let req = rep.request;
-
-        let address = alt req.headers.find("x-forwarded-for") {
-          none { "-" }
-          some(addresses) { addresses[0] }
-        };
-
-        let method = alt req.headers.find("METHOD") {
-          none { "-" }
-          some(methods) { methods[0] }
-        };
-
-        let size = rep.body.len();
-
-        self.logger.write_line(#fmt("%s - %s [%s] \"%s %s\" %u %s",
-            address,
-            "-",
-            time::now().strftime("%d/%m/%Y:%H:%M:%S %z"),
-            method,
-            req.path,
-            rep.code,
-            if size == 0u { "-" } else { #fmt("%u", size) }));
     }
 }

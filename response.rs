@@ -1,206 +1,221 @@
-import std::map;
-import std::map::{hashmap, str_hash};
-
-import mongrel2::request;
-
 type response = {
-    request: request,
-    code: uint,
-    status: str,
-    headers: hashmap<str, [str]>,
-    body: [u8],
+    mut code: uint,
+    mut reply: fn@([u8]),
+    mut end: fn@(),
 };
 
-fn response_headers(req: request,
-                    code: uint,
-                    status: str,
-                    headers: hashmap<str, [str]>,
-                    body: [u8]) -> response {
-    {
-        request: req,
-        code: code,
-        status: status,
-        headers: headers,
-        body: body,
+fn response(m2: mongrel2::connection, req: mongrel2::request) -> @response {
+    @{
+        mut code: 200u,
+        mut reply: { |msg| m2.reply(req, msg); },
+        mut end: { || m2.reply(req, str::bytes("")); },
     }
 }
 
-fn response(req: request,
-            code: uint,
-            status: str,
-            body: [u8]) -> response {
-    response_headers(req, code, status, str_hash(), body)
-}
+impl response for @response {
+    fn reply_status(code: uint, status: str) {
+        self.code = code;
+        self.reply(str::bytes(#fmt("HTTP/1.1 %u %s\r\n", code, status)));
+    }
 
-fn redirect(req: request, location: str) -> response {
-    let headers = str_hash();
-    headers.insert("Location", [location]);
+    fn reply_headers(headers: hashmap<str, [str]>) {
+        let mut rep = [];
 
-    response_headers(req, 302u, "Found", headers, [])
-}
+        for headers.each { |key, values|
+            let lines = vec::map(values) { |value|
+                str::bytes(key + ": " + value + "\r\n")
+            };
 
-fn http_100(req: request) -> response {
-    response(req, 100u, "Continue", [])
-}
+            rep += vec::concat(lines);
+        }
+        rep += str::bytes("\r\n");
 
-fn http_101(req: request) -> response {
-    response(req, 101u, "Switching Protocols", [])
-}
+        self.reply(rep);
+    }
 
-fn http_200_headers(req: request,
-                    headers: hashmap<str, [str]>,
-                    body: [u8]) -> response {
-    response_headers(req, 200u, "OK", headers, body)
-}
+    fn reply_http_headers(code: uint,
+                          status: str,
+                          headers: hashmap<str, [str]>,
+                          body: [u8]) {
+        self.reply_status(code, status);
+        self.reply_headers(headers);
+        self.reply(body);
+        self.end();
+    }
 
-fn http_200(req: request, body: [u8]) -> response {
-    http_200_headers(req, str_hash(), body)
-}
+    fn reply_http(code: uint, status: str, body: [u8]) {
+        self.reply_http_headers(code, status, str_hash(), body)
+    }
 
-fn http_201(req: request) -> response {
-    response(req, 201u, "Created", [])
-}
+    fn redirect(location: str) {
+        let headers = str_hash();
+        headers.insert("Location", [location]);
 
-fn http_202(req: request) -> response {
-    response(req, 202u, "Accepted", [])
-}
+        self.reply_http_headers(302u, "Found", headers, [])
+    }
 
-fn http_203(req: request) -> response {
-    response(req, 203u, "Non-Authoritative Information", [])
-}
+    fn http_100() {
+        self.reply_http(100u, "Continue", [])
+    }
 
-fn http_204(req: request) -> response {
-    response(req, 204u, "No Content", [])
-}
+    fn http_101() {
+        self.reply_http(101u, "Switching Protocols", [])
+    }
 
-fn http_205(req: request) -> response {
-    response(req, 205u, "Reset Content", [])
-}
+    fn http_200_headers(headers: hashmap<str, [str]>,
+                        body: [u8]) {
+        self.reply_http_headers(200u, "OK", headers, body)
+    }
 
-fn http_206(req: request) -> response {
-    response(req, 206u, "Partial Content", [])
-}
+    fn http_200(body: [u8]) {
+        self.http_200_headers(str_hash(), body)
+    }
 
-fn http_300(req: request) -> response {
-    response(req, 300u, "Multiple Choices", [])
-}
+    fn http_201() {
+        self.reply_http(201u, "Created", [])
+    }
 
-fn http_301(req: request) -> response {
-    response(req, 301u, "Moved Permanently", [])
-}
+    fn http_202() {
+        self.reply_http(202u, "Accepted", [])
+    }
 
-fn http_302(req: request) -> response {
-    response(req, 302u, "Found", [])
-}
+    fn http_203() {
+        self.reply_http(203u, "Non-Authoritative Information", [])
+    }
 
-fn http_303(req: request) -> response {
-    response(req, 303u, "See Other", [])
-}
+    fn http_204() {
+        self.reply_http(204u, "No Content", [])
+    }
 
-fn http_304(req: request) -> response {
-    response(req, 304u, "Not Modified", [])
-}
+    fn http_205() {
+        self.reply_http(205u, "Reset Content", [])
+    }
 
-fn http_305(req: request) -> response {
-    response(req, 305u, "Use Proxy", [])
-}
+    fn http_206() {
+        self.reply_http(206u, "Partial Content", [])
+    }
 
-fn http_307(req: request) -> response {
-    response(req, 305u, "Temporary Redirect", [])
-}
+    fn http_300() {
+        self.reply_http(300u, "Multiple Choices", [])
+    }
 
-fn http_400(req: request, body: [u8]) -> response {
-    response(req, 400u, "Bad Request", body)
-}
+    fn http_301() {
+        self.reply_http(301u, "Moved Permanently", [])
+    }
 
-fn http_401(req: request) -> response {
-    response(req, 401u, "Unauthorized", [])
-}
+    fn http_302() {
+        self.reply_http(302u, "Found", [])
+    }
 
-fn http_402(req: request) -> response {
-    response(req, 402u, "Payment Required", [])
-}
+    fn http_303() {
+        self.reply_http(303u, "See Other", [])
+    }
 
-fn http_403(req: request) -> response {
-    response(req, 403u, "Forbidden", [])
-}
+    fn http_304() {
+        self.reply_http(304u, "Not Modified", [])
+    }
 
-fn http_404(req: request) -> response {
-    response(req, 404u, "Not Found", [])
-}
+    fn http_305() {
+        self.reply_http(305u, "Use Proxy", [])
+    }
 
-fn http_405(req: request) -> response {
-    response(req, 405u, "Method Not Allowed", [])
-}
+    fn http_307() {
+        self.reply_http(305u, "Temporary Redirect", [])
+    }
 
-fn http_406(req: request) -> response {
-    response(req, 406u, "Not Acceptable", [])
-}
+    fn http_400(body: [u8]) {
+        self.reply_http(400u, "Bad Request", body)
+    }
 
-fn http_407(req: request) -> response {
-    response(req, 407u, "Proxy Authentication Required", [])
-}
+    fn http_401() {
+        self.reply_http(401u, "Unauthorized", [])
+    }
 
-fn http_408(req: request) -> response {
-    response(req, 408u, "Request Timeout", [])
-}
+    fn http_402() {
+        self.reply_http(402u, "Payment Required", [])
+    }
 
-fn http_409(req: request) -> response {
-    response(req, 409u, "Conflict", [])
-}
+    fn http_403() {
+        self.reply_http(403u, "Forbidden", [])
+    }
 
-fn http_410(req: request) -> response {
-    response(req, 410u, "Gone", [])
-}
+    fn http_404() {
+        self.reply_http(404u, "Not Found", [])
+    }
 
-fn http_411(req: request) -> response {
-    response(req, 411u, "Length Required", [])
-}
+    fn http_405() {
+        self.reply_http(405u, "Method Not Allowed", [])
+    }
 
-fn http_412(req: request) -> response {
-    response(req, 412u, "Precondition Failed", [])
-}
+    fn http_406() {
+        self.reply_http(406u, "Not Acceptable", [])
+    }
 
-fn http_413(req: request) -> response {
-    response(req, 413u, "Request Entity Too Large", [])
-}
+    fn http_407() {
+        self.reply_http(407u, "Proxy Authentication Required", [])
+    }
 
-fn http_414(req: request) -> response {
-    response(req, 414u, "Request-URI Too Long", [])
-}
+    fn http_408() {
+        self.reply_http(408u, "Request Timeout", [])
+    }
 
-fn http_415(req: request) -> response {
-    response(req, 415u, "Unsupported Media Type", [])
-}
+    fn http_409() {
+        self.reply_http(409u, "Conflict", [])
+    }
 
-fn http_416(req: request) -> response {
-    response(req, 416u, "Requested Range Not Satisifiable", [])
-}
+    fn http_410() {
+        self.reply_http(410u, "Gone", [])
+    }
 
-fn http_417(req: request) -> response {
-    response(req, 417u, "Expectation Failed", [])
-}
+    fn http_411() {
+        self.reply_http(411u, "Length Required", [])
+    }
 
-fn http_500(req: request, body: [u8]) -> response {
-    response(req, 500u, "Internal Server Error", body)
-}
+    fn http_412() {
+        self.reply_http(412u, "Precondition Failed", [])
+    }
 
-fn http_501(req: request) -> response {
-    response(req, 501u, "Not Implemented", [])
-}
+    fn http_413() {
+        self.reply_http(413u, "Request Entity Too Large", [])
+    }
 
-fn http_502(req: request) -> response {
-    response(req, 502u, "Bad Gateway", [])
-}
+    fn http_414() {
+        self.reply_http(414u, "Request-URI Too Long", [])
+    }
 
-fn http_503(req: request) -> response {
-    response(req, 503u, "Service Unavailable", [])
-}
+    fn http_415() {
+        self.reply_http(415u, "Unsupported Media Type", [])
+    }
 
-fn http_504(req: request) -> response {
-    response(req, 504u, "Gateway Timeout", [])
-}
+    fn http_416() {
+        self.reply_http(416u, "Requested Range Not Satisifiable", [])
+    }
 
-fn http_505(req: request) -> response {
-    response(req, 505u, "HTTP Version Not Supported", [])
+    fn http_417() {
+        self.reply_http(417u, "Expectation Failed", [])
+    }
+
+    fn http_500(body: [u8]) {
+        self.reply_http(500u, "Internal Server Error", body)
+    }
+
+    fn http_501() {
+        self.reply_http(501u, "Not Implemented", [])
+    }
+
+    fn http_502() {
+        self.reply_http(502u, "Bad Gateway", [])
+    }
+
+    fn http_503() {
+        self.reply_http(503u, "Service Unavailable", [])
+    }
+
+    fn http_504() {
+        self.reply_http(504u, "Gateway Timeout", [])
+    }
+
+    fn http_505() {
+        self.reply_http(505u, "HTTP Version Not Supported", [])
+    }
 }

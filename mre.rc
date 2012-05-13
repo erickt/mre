@@ -11,7 +11,9 @@ use zmq;
 use crypto;
 use elasticsearch;
 
+mod request;
 mod response;
+mod middleware;
 mod router;
 mod base64;
 mod auth;

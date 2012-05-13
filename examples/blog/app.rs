@@ -23,7 +23,11 @@ fn app() -> app {
         "tcp://127.0.0.1:9998",
         "tcp://127.0.0.1:9999");
 
-    let mre = mre::mre(m2, io::stdout());
+    let middleware = mre::middleware::middleware([
+        mre::middleware::logger(io::stdout())
+    ]);
+
+    let mre = mre::mre(m2, middleware);
 
     let es = elasticsearch::connect_with_zmq(zmq, "tcp://localhost:9700");
 
@@ -40,11 +44,11 @@ fn app() -> app {
 }
 
 impl app for app {
-    fn get(regex: str, f: fn@(request, pcre::match) -> mre::response::response) {
+    fn get(regex: str, f: mre::router::handler) {
         self.mre.router.add("GET", regex, f)
     }
 
-    fn post(regex: str, f: fn@(request, pcre::match) -> mre::response::response) {
+    fn post(regex: str, f: mre::router::handler) {
         self.mre.router.add("POST", regex, f)
     }
 

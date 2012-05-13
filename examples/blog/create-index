@@ -1,6 +1,7 @@
 #!/bin/sh
 
 curl -XDELETE "http://localhost:9200/blog"
+echo
 
 curl -XPOST "http://localhost:9200/blog" -d '{
 	"settings": {
@@ -35,8 +36,10 @@ curl -XPOST "http://localhost:9200/blog" -d '{
 		}
 	}
 }'
+echo
 
 curl -XPOST "http://localhost:9200/blog/post" -d '{
 	"title": "hello world",
 	"body": "insert blog post here"
 }'
+echo

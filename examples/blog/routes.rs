@@ -1,12 +1,3 @@
-import mre::response::{
-    response,
-    http_200,
-    http_400,
-    http_401,
-    http_404,
-    http_500,
-    redirect
-};
 import mustache::context;
 
 // FIXME: move after https://github.com/mozilla/rust/issues/2242 is fixed.
@@ -43,45 +34,45 @@ impl of to_mustache for comment::comment {
     }
 }
 
-impl render_200 for app {
-    fn render_200<T: to_mustache>(req: request, path: str, data: T) -> response {
+impl render_200 for @response {
+    fn render_200<T: to_mustache>(mu: mustache::context, path: str, data: T) {
         let data = alt check data.to_mustache() {
             mustache::map(m) { m }
         };
 
-        let template = self.mu.render_file(path, data);
-        http_200(req, str::bytes(template))
+        let template = mu.render_file(path, data);
+        self.http_200(str::bytes(template))
     }
 }
 
 fn routes(app: app::app) {
     // Show all the posts.
-    app.get("^/$") { |req, _m|
+    app.get("^/$") { |_req, rep, _m|
         let posts = post::all(app.es);
 
         // This can be simplified after mozilla/rust/issues/2258 is fixed.
-        app.render_200(req, "index", hash_from_strs([
+        rep.render_200(app.mu, "index", hash_from_strs([
             ("posts", posts.to_mustache())
         ]).to_mustache())
     }
 
     // Create a user.
-    app.get("^/signup$") { |req, _m|
+    app.get("^/signup$") { |_req, rep, _m|
         let hash: hashmap<str, str> = str_hash();
-        app.render_200(req, "signup", hash)
+        rep.render_200(app.mu, "signup", hash)
     }
 
-    app.post("^/signup$") { |req, _m|
+    app.post("^/signup$") { |req, rep, _m|
         import user::user;
 
-        let form = uri::decode_qs(req.body);
+        let form = uri::decode_qs(req.body());
         alt form.find("username") {
-          none { http_400(req, str::bytes("missing username")) }
+          none { rep.http_400(str::bytes("missing username")) }
           some(username) {
             let username = username[0];
 
             alt form.find("password") {
-              none { http_400(req, str::bytes("missing password")) }
+              none { rep.http_400(str::bytes("missing password")) }
               some(password) {
                 alt form.find("password_confirm") {
                   some(password_confirm) if password == password_confirm { 
@@ -89,12 +80,12 @@ fn routes(app: app::app) {
                                           username, password[0]);
 
                     alt user.create() {
-                      ok((id, _)) { redirect(req, "/") }
-                      err(e) { http_400(req, str::bytes(e)) }
+                      ok((id, _)) { rep.redirect("/") }
+                      err(e) { rep.http_400(str::bytes(e)) }
                     }
                   }
                   _ {
-                    http_400(req, str::bytes("invalid password confirmation"))
+                    rep.http_400(str::bytes("invalid password confirmation"))
                   }
                 }
               }
@@ -104,32 +95,32 @@ fn routes(app: app::app) {
     }
 
     // Login a user.
-    app.get("^/login$") { |req, _m|
+    app.get("^/login$") { |_req, rep, _m|
         let hash: hashmap<str, str> = str_hash();
-        app.render_200(req, "login", hash)
+        rep.render_200(app.mu, "login", hash)
     }
 
-    app.post("^/login$") { |req, _m|
+    app.post("^/login$") { |req, rep, _m|
         import user::user;
 
-        let form = uri::decode_qs(req.body);
+        let form = uri::decode_qs(req.body());
         alt form.find("username") {
-          none { http_400(req, str::bytes("missing username")) }
+          none { rep.http_400(str::bytes("missing username")) }
           some(username) {
             let username = username[0];
 
             alt form.find("password") {
-              none { http_400(req, str::bytes("missing password")) }
+              none { rep.http_400(str::bytes("missing password")) }
               some(password) {
                 let password = password[0];
 
                 alt user::find(app.es, "blog", username) {
-                  none { http_400(req, str::bytes("user does not exist")) }
+                  none { rep.http_400(str::bytes("user does not exist")) }
                   some(user) {
                     if app.password_hasher.verify(password, user.password()) {
-                        redirect(req, "/")
+                        rep.redirect("/")
                     } else {
-                        http_401(req)
+                        rep.http_401()
                     }
                   }
                 }
@@ -140,25 +131,25 @@ fn routes(app: app::app) {
     }
 
     // Show all the users.
-    app.get("^/users$") { |req, _m|
+    app.get("^/users$") { |_req, rep, _m|
         let users = user::all(app.es, "blog");
 
         #error("%?", users);
 
         // This can be simplified after mozilla/rust/issues/2258 is fixed.
-        app.render_200(req, "user_index", hash_from_strs([
+        rep.render_200(app.mu, "user_index", hash_from_strs([
             ("users", users.to_mustache())
         ]).to_mustache())
     }
 
     // Show a user.
-    app.get("^/users/(?<id>[-_A-Za-z0-9]+)$") { |req, m|
+    app.get("^/users/(?<id>[-_A-Za-z0-9]+)$") { |_req, rep, m|
         let id = m.named("id");
 
         alt user::find(app.es, "blog", id) {
-          none { http_404(req) }
+          none { rep.http_404() }
           some(user) {
-            app.render_200(req, "user_show", hash_from_strs([
+            rep.render_200(app.mu, "user_show", hash_from_strs([
                 ("user", user.to_mustache())
             ]).to_mustache())
           }
@@ -166,26 +157,26 @@ fn routes(app: app::app) {
     }
 
     // Delete a user.
-    app.post("^/users/(?<id>[-_A-Za-z0-9]+)/delete$") { |req, m|
+    app.post("^/users/(?<id>[-_A-Za-z0-9]+)/delete$") { |_req, rep, m|
         let id = m.named("id");
 
         alt user::find(app.es, "blog", id) {
-          none { http_404(req) }
+          none { rep.http_404() }
           some(user) {
             user.delete();
 
-            redirect(req, "/")
+            rep.redirect("/")
           }
         }
     }
 
     // Create a post.
-    app.get("^/posts/new$") { |req, _m|
-        app.render_200(req, "post_new", post::post(app.es, ""))
+    app.get("^/posts/new$") { |_req, rep, _m|
+        rep.render_200(app.mu, "post_new", post::post(app.es, ""))
     }
 
-    app.post("^/posts$") { |req, _m|
-        let form = uri::decode_qs(req.body);
+    app.post("^/posts$") { |req, rep, _m|
+        let form = uri::decode_qs(req.body());
         let post = post::post(app.es, "");
 
         alt form.find("title") {
@@ -199,21 +190,21 @@ fn routes(app: app::app) {
         }
 
         alt post.save() {
-          ok((id, _version)) { redirect(req, "/posts/" + id) }
-          err(e) { http_500(req, str::bytes(e)) }
+          ok((id, _version)) { rep.redirect("/posts/" + id) }
+          err(e) { rep.http_500(str::bytes(e)) }
         }
     }
 
     // Show a post.
-    app.get("^/posts/(?<id>[-_A-Za-z0-9]+)$") { |req, m|
+    app.get("^/posts/(?<id>[-_A-Za-z0-9]+)$") { |_req, rep, m|
         let id = m.named("id");
 
         alt post::find(app.es, id) {
-          none { http_404(req) }
+          none { rep.http_404() }
           some(post) {
             let comments = post.find_comments();
 
-            app.render_200(req, "post_show", hash_from_strs([
+            rep.render_200(app.mu, "post_show", hash_from_strs([
                 ("post_id", id.to_mustache()),
                 ("post", post.to_mustache()),
                 ("comments", comments.to_mustache())
@@ -223,13 +214,13 @@ fn routes(app: app::app) {
     }
 
     // Edit a post.
-    app.get("^/posts/(?<id>[-_A-Za-z0-9]+)/edit$") { |req, m|
+    app.get("^/posts/(?<id>[-_A-Za-z0-9]+)/edit$") { |_req, rep, m|
         let id = m.named("id");
 
         alt post::find(app.es, id) {
-          none { http_404(req) }
+          none { rep.http_404() }
           some(post) {
-            app.render_200(req, "post_edit", hash_from_strs([
+            rep.render_200(app.mu, "post_edit", hash_from_strs([
                 ("post_id", id.to_mustache()),
                 ("post", post.to_mustache())
             ]).to_mustache())
@@ -237,12 +228,12 @@ fn routes(app: app::app) {
         }
     }
 
-    app.post("^/posts/(?<id>[-_A-Za-z0-9]+)$") { |req, m|
+    app.post("^/posts/(?<id>[-_A-Za-z0-9]+)$") { |req, rep, m|
         let post_id = m.named("id");
-        let form = uri::decode_qs(req.body);
+        let form = uri::decode_qs(req.body());
 
         alt post::find(app.es, post_id) {
-          none { http_404(req) }
+          none { rep.http_404() }
           some(post) {
             alt form.find("title") {
               some(title) { post.set_title(title[0]); }
@@ -255,32 +246,32 @@ fn routes(app: app::app) {
             }
 
             alt post.save() {
-              ok(id) { redirect(req, "/posts/" + post_id) }
-              err(e) { http_500(req, str::bytes(e)) }
+              ok(id) { rep.redirect("/posts/" + post_id) }
+              err(e) { rep.http_500(str::bytes(e)) }
             }
           }
         }
     }
 
     // Delete a post.
-    app.post("^/posts/(?<id>[-_A-Za-z0-9]+)/delete$") { |req, m|
+    app.post("^/posts/(?<id>[-_A-Za-z0-9]+)/delete$") { |_req, rep, m|
         alt post::find(app.es, m.named("id")) {
-          none { http_404(req) }
+          none { rep.http_404() }
           some(post) {
             post.delete();
 
-            redirect(req, "/")
+            rep.redirect("/")
           }
         }
     }
 
     // Create a comment.
-    app.post("^/posts/(?<id>[-_A-Za-z0-9]+)/comments$") { |req, m|
+    app.post("^/posts/(?<id>[-_A-Za-z0-9]+)/comments$") { |req, rep, m|
         let id = m.named("id");
-        let form = uri::decode_qs(req.body);
+        let form = uri::decode_qs(req.body());
 
         alt post::find(app.es, id) {
-          none { http_404(req) }
+          none { rep.http_404() }
           some(post) {
             let comment = comment::comment(app.es, id, "");
 
@@ -290,22 +281,22 @@ fn routes(app: app::app) {
             }
 
             alt comment.save() {
-              ok(_) { redirect(req, "/posts/" + id) }
-              err(e){ http_500(req, str::bytes(e)) }
+              ok(_) { rep.redirect("/posts/" + id) }
+              err(e){ rep.http_500(str::bytes(e)) }
             }
           }
         }
     }
 
     // Edit a comment.
-    app.get("^/posts/(?<post_id>[-_A-Za-z0-9]+)/comments/(?<id>[-_A-Za-z0-9]+)/edit$") { |req, m|
+    app.get("^/posts/(?<post_id>[-_A-Za-z0-9]+)/comments/(?<id>[-_A-Za-z0-9]+)/edit$") { |_req, rep, m|
         let post_id = m.named("post_id");
         let comment_id = m.named("id");
 
         alt comment::find(app.es, post_id, comment_id) {
-          none { http_404(req) }
+          none { rep.http_404() }
           some(comment) {
-            app.render_200(req, "comment_edit", hash_from_strs([
+            rep.render_200(app.mu, "comment_edit", hash_from_strs([
                 ("post_id", post_id.to_mustache()),
                 ("comment", comment.to_mustache())
             ]).to_mustache())
@@ -313,13 +304,13 @@ fn routes(app: app::app) {
         }
     }
 
-    app.post("^/posts/(?<post_id>[-_A-Za-z0-9]+)/comments/(?<id>[-_A-Za-z0-9]+)$") { |req, m|
+    app.post("^/posts/(?<post_id>[-_A-Za-z0-9]+)/comments/(?<id>[-_A-Za-z0-9]+)$") { |req, rep, m|
         let post_id = m.named("post_id");
         let comment_id = m.named("id");
-        let form = uri::decode_qs(req.body);
+        let form = uri::decode_qs(req.body());
 
         alt comment::find(app.es, post_id, comment_id) {
-          none { http_404(req) }
+          none { rep.http_404() }
           some(comment) {
             alt form.find("body") {
               some(body) { comment.set_body(body[0]); }
@@ -327,24 +318,24 @@ fn routes(app: app::app) {
             }
 
             alt comment.save() {
-              ok(id) { redirect(req, "/posts/" + post_id) }
-              err(e) { http_500(req, str::bytes(e)) }
+              ok(id) { rep.redirect("/posts/" + post_id) }
+              err(e) { rep.http_500(str::bytes(e)) }
             }
           }
         }
     }
 
     // Delete a comment.
-    app.post("^/posts/(?<post_id>[-_A-Za-z0-9]+)/comments/(?<id>[-_A-Za-z0-9]+)/delete$") { |req, m|
+    app.post("^/posts/(?<post_id>[-_A-Za-z0-9]+)/comments/(?<id>[-_A-Za-z0-9]+)/delete$") { |_req, rep, m|
         let post_id = m.named("post_id");
         let comment_id = m.named("id");
 
         alt comment::find(app.es, post_id, comment_id) {
-          none { http_404(req) }
+          none { rep.http_404() }
           some(comment) {
             comment.delete();
 
-            redirect(req, "/posts/" + post_id)
+            rep.redirect("/posts/" + post_id)
           }
         }
     }
