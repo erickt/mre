@@ -1,6 +1,15 @@
 import mustache::context;
 
 // FIXME: move after https://github.com/mozilla/rust/issues/2242 is fixed.
+impl <T: to_mustache> of to_mustache for option<T> {
+    fn to_mustache() -> mustache::data {
+        alt self {
+          none { mustache::bool(false) }
+          some(v) { v.to_mustache() }
+        }
+    }
+}
+
 impl of to_mustache for user::user {
     fn to_mustache() -> mustache::data {
         import user::user;
@@ -57,11 +66,12 @@ fn login(app: app, username: str, password: str) -> option<user::user> {
 
 fn routes(app: app::app) {
     // Show all the posts.
-    app.get("^/$") { |_req, rep, _m|
+    app.get("^/$") { |req, rep, _m|
         let posts = post::all(app.es);
 
         // This can be simplified after mozilla/rust/issues/2258 is fixed.
         rep.render_200(app.mu, "index", hash_from_strs([
+            ("user", req.data.user.to_mustache()),
             ("posts", posts.to_mustache())
         ]).to_mustache())
     }
@@ -97,9 +107,45 @@ fn routes(app: app::app) {
             import user::user;
             alt login(app, username, password) {
               none { rep.http_401() }
-              some(user) { rep.redirect("/") }
+              some(user) {
+                // Destroy any old sessions.
+                alt req.data.session {
+                  none {}
+                  some(session) {
+                    rep.clear_cookie("session");
+                    session.delete();
+                  }
+                }
+
+                // Create a new session.
+                let session = session::session(app.es, "blog", user.user_id());
+
+                alt session.create() {
+                  ok((id, _version)) {
+                    let cookie = cookie::cookie("session", id);
+                    rep.set_cookie(cookie);
+                    rep.redirect("/")
+                  }
+                  err(e) {
+                    rep.http_500(str::bytes(e))
+                  }
+                }
+              }
             }
         }
+    }
+
+    // Logout a user.
+    app.post("^/logout$") { |req, rep, _m|
+        alt req.data.session {
+          none {}
+          some(session) {
+            session.delete();
+            rep.clear_cookie("session");
+          }
+        }
+
+        rep.redirect("/")
     }
 
     // Show all the users.

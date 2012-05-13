@@ -29,15 +29,24 @@ fn app() -> app {
         "tcp://127.0.0.1:9998",
         "tcp://127.0.0.1:9999");
 
+    let es = elasticsearch::connect_with_zmq(zmq, "tcp://localhost:9700");
+
     let middleware = mre::middleware::middleware([
-        mre::middleware::logger(io::stdout())
+        mre::middleware::logger(io::stdout()),
+        mre::middleware::session(es,
+            "blog",
+            "blog",
+            "session"
+        ) { |req: @request<data>, session, user|
+            req.data.session = some(session);
+            req.data.user = some(user);
+        }
     ]);
 
     let mre = mre::mre(m2, middleware) { ||
         { mut session: none, mut user: none }
     };
 
-    let es = elasticsearch::connect_with_zmq(zmq, "tcp://localhost:9700");
 
     let mu = mustache::context("views", ".mustache");
 

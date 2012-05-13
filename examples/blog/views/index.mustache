@@ -2,8 +2,18 @@
 
 <h1>It's a blog!</h1>
 
+{{# user}}
+Welcome back, {{user_id}}<br>
+<form action="/logout" method="post">
+	<input type="submit" value="logout">
+</form>
+{{/ user}}
+
+{{^ user}}
 <a href="signup">sign up</a><br>
 <a href="login">log in</a><br>
+{{/ user}}
+
 <a href="users">users</a><br>
 <a href="posts/new">make a new post</a><br>
 

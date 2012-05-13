@@ -14,9 +14,10 @@ import std::json;
 import std::json::json;
 import std::map::{hashmap, str_hash, hash_from_strs};
 
-import mre::{model, user};
+import mre::{cookie, model, session, user};
 import mre::request::request;
 import mre::response::response;
+import mre::session::session;
 import mustache::to_mustache;
 import zmq::error;
 
