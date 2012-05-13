@@ -45,6 +45,16 @@ impl render_200 for @response {
     }
 }
 
+fn login(app: app, username: str, password: str) -> option<user::user> {
+    user::find(app.es, "blog", username).chain { |user|
+        if app.password_hasher.verify(password, user.password()) {
+            some(user)
+        } else {
+            none
+        }
+    }
+}
+
 fn routes(app: app::app) {
     // Show all the posts.
     app.get("^/$") { |_req, rep, _m|
@@ -63,34 +73,16 @@ fn routes(app: app::app) {
     }
 
     app.post("^/signup$") { |req, rep, _m|
-        import user::user;
+        forms::signup(req, rep) { |username, password|
+            import user::user;
 
-        let form = uri::decode_qs(req.body());
-        alt form.find("username") {
-          none { rep.http_400(str::bytes("missing username")) }
-          some(username) {
-            let username = username[0];
+            let user = user::user(app.es, app.password_hasher, "blog",
+                                  username, password);
 
-            alt form.find("password") {
-              none { rep.http_400(str::bytes("missing password")) }
-              some(password) {
-                alt form.find("password_confirm") {
-                  some(password_confirm) if password == password_confirm { 
-                    let user = user::user(app.es, app.password_hasher, "blog",
-                                          username, password[0]);
-
-                    alt user.create() {
-                      ok((id, _)) { rep.redirect("/") }
-                      err(e) { rep.http_400(str::bytes(e)) }
-                    }
-                  }
-                  _ {
-                    rep.http_400(str::bytes("invalid password confirmation"))
-                  }
-                }
-              }
+            alt user.create() {
+              ok((id, _)) { rep.redirect("/") }
+              err(e) { rep.http_400(str::bytes(e)) }
             }
-          }
         }
     }
 
@@ -101,32 +93,12 @@ fn routes(app: app::app) {
     }
 
     app.post("^/login$") { |req, rep, _m|
-        import user::user;
-
-        let form = uri::decode_qs(req.body());
-        alt form.find("username") {
-          none { rep.http_400(str::bytes("missing username")) }
-          some(username) {
-            let username = username[0];
-
-            alt form.find("password") {
-              none { rep.http_400(str::bytes("missing password")) }
-              some(password) {
-                let password = password[0];
-
-                alt user::find(app.es, "blog", username) {
-                  none { rep.http_400(str::bytes("user does not exist")) }
-                  some(user) {
-                    if app.password_hasher.verify(password, user.password()) {
-                        rep.redirect("/")
-                    } else {
-                        rep.http_401()
-                    }
-                  }
-                }
-              }
+        forms::login(req, rep) { |username, password|
+            import user::user;
+            alt login(app, username, password) {
+              none { rep.http_401() }
+              some(user) { rep.redirect("/") }
             }
-          }
         }
     }
 
@@ -176,22 +148,16 @@ fn routes(app: app::app) {
     }
 
     app.post("^/posts$") { |req, rep, _m|
-        let form = uri::decode_qs(req.body());
-        let post = post::post(app.es, "");
+        forms::post(req, rep) { |title, body|
+            let post = post::post(app.es, "");
 
-        alt form.find("title") {
-          some(title) { post.set_title(title[0]); }
-          none {}
-        }
+            post.set_title(title);
+            post.set_body(body);
 
-        alt form.find("body") {
-          some(body) { post.set_body(body[0]); }
-          none {}
-        }
-
-        alt post.save() {
-          ok((id, _version)) { rep.redirect("/posts/" + id) }
-          err(e) { rep.http_500(str::bytes(e)) }
+            alt post.save() {
+              ok((id, _version)) { rep.redirect("/posts/" + id) }
+              err(e) { rep.http_500(str::bytes(e)) }
+            }
         }
     }
 
@@ -230,24 +196,18 @@ fn routes(app: app::app) {
 
     app.post("^/posts/(?<id>[-_A-Za-z0-9]+)$") { |req, rep, m|
         let post_id = m.named("id");
-        let form = uri::decode_qs(req.body());
 
         alt post::find(app.es, post_id) {
           none { rep.http_404() }
           some(post) {
-            alt form.find("title") {
-              some(title) { post.set_title(title[0]); }
-              none {}
-            }
+            forms::post(req, rep) { |title, body|
+                post.set_title(title);
+                post.set_body(body);
 
-            alt form.find("body") {
-              some(body) { post.set_body(body[0]); }
-              none {}
-            }
-
-            alt post.save() {
-              ok(id) { rep.redirect("/posts/" + post_id) }
-              err(e) { rep.http_500(str::bytes(e)) }
+                alt post.save() {
+                  ok(id) { rep.redirect("/posts/" + post_id) }
+                  err(e) { rep.http_500(str::bytes(e)) }
+                }
             }
           }
         }
@@ -268,21 +228,18 @@ fn routes(app: app::app) {
     // Create a comment.
     app.post("^/posts/(?<id>[-_A-Za-z0-9]+)/comments$") { |req, rep, m|
         let id = m.named("id");
-        let form = uri::decode_qs(req.body());
 
         alt post::find(app.es, id) {
           none { rep.http_404() }
           some(post) {
-            let comment = comment::comment(app.es, id, "");
+            forms::comment(req, rep) { |body|
+                let comment = comment::comment(app.es, id, "");
+                comment.set_body(body);
 
-            alt form.find("body") {
-              some(body) { comment.set_body(body[0]); }
-              none {}
-            }
-
-            alt comment.save() {
-              ok(_) { rep.redirect("/posts/" + id) }
-              err(e){ rep.http_500(str::bytes(e)) }
+                alt comment.save() {
+                  ok(_) { rep.redirect("/posts/" + id) }
+                  err(e){ rep.http_500(str::bytes(e)) }
+                }
             }
           }
         }
@@ -307,19 +264,17 @@ fn routes(app: app::app) {
     app.post("^/posts/(?<post_id>[-_A-Za-z0-9]+)/comments/(?<id>[-_A-Za-z0-9]+)$") { |req, rep, m|
         let post_id = m.named("post_id");
         let comment_id = m.named("id");
-        let form = uri::decode_qs(req.body());
 
         alt comment::find(app.es, post_id, comment_id) {
           none { rep.http_404() }
           some(comment) {
-            alt form.find("body") {
-              some(body) { comment.set_body(body[0]); }
-              none {}
-            }
+            forms::comment(req, rep) { |body|
+                comment.set_body(body);
 
-            alt comment.save() {
-              ok(id) { rep.redirect("/posts/" + post_id) }
-              err(e) { rep.http_500(str::bytes(e)) }
+                alt comment.save() {
+                  ok(id) { rep.redirect("/posts/" + post_id) }
+                  err(e) { rep.http_500(str::bytes(e)) }
+                }
             }
           }
         }

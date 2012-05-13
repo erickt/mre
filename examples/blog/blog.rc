@@ -23,6 +23,7 @@ import zmq::error;
 import elasticsearch::{search_builder, json_dict_builder};
 
 mod app;
-mod post;
 mod comment;
+mod forms;
+mod post;
 mod routes;
