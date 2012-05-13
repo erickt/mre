@@ -3,10 +3,15 @@ import mre::router::router;
 import mre::response::response;
 import zmq::context;
 
+type data = {
+    mut session: option<mre::session::session>,
+    mut user: option<mre::user::user>,
+};
+
 type app = {
     zmq: zmq::context,
     m2: mongrel2::connection,
-    mre: mre::mre,
+    mre: mre::mre<data>,
     es: elasticsearch::client,
     mu: mustache::context,
     password_hasher: mre::auth::hasher
@@ -28,7 +33,9 @@ fn app() -> app {
         mre::middleware::logger(io::stdout())
     ]);
 
-    let mre = mre::mre(m2, middleware);
+    let mre = mre::mre(m2, middleware) { ||
+        { mut session: none, mut user: none }
+    };
 
     let es = elasticsearch::connect_with_zmq(zmq, "tcp://localhost:9700");
 
@@ -45,11 +52,11 @@ fn app() -> app {
 }
 
 impl app for app {
-    fn get(regex: str, f: mre::router::handler) {
+    fn get(regex: str, f: mre::router::handler<data>) {
         self.mre.router.add("GET", regex, f)
     }
 
-    fn post(regex: str, f: mre::router::handler) {
+    fn post(regex: str, f: mre::router::handler<data>) {
         self.mre.router.add("POST", regex, f)
     }
 

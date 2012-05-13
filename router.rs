@@ -1,29 +1,29 @@
 import request::request;
 import response::response;
 
-type handler = fn@(@request, @response, pcre::match);
+type handler<T> = fn@(@request<T>, @response, pcre::match);
 
-type router = {
-    mut routes: [(str, @pcre::pcre, handler)],
+type router<T> = {
+    mut routes: [(str, @pcre::pcre, handler<T>)],
 };
 
-fn router() -> router {
+fn router<T>() -> router<T> {
     { mut routes: [] }
 }
 
-impl router for router {
-    fn add(method: str, pattern: str, handler: handler) {
+impl router<T> for router<T> {
+    fn add(method: str, pattern: str, handler: handler<T>) {
         self.routes += [(method, @pcre::mk_pcre(pattern), handler)];
     }
 
-    fn add_patterns(items: [(str, str, handler)]) {
+    fn add_patterns(items: [(str, str, handler<T>)]) {
         vec::iter(items) { |item|
             let (method, pattern, handler) = item;
             self.add(method, pattern, handler)
         };
     }
 
-    fn find(method: str, path: str) -> option<(handler, pcre::match)> {
+    fn find(method: str, path: str) -> option<(handler<T>, pcre::match)> {
         for self.routes.each() { |item|
             let (meth, regex, handler) = item;
 
