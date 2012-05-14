@@ -1,5 +1,5 @@
 fn signup(req: @request<app::data>, rep: @response, f: fn(str, str)) {
-    let form = uri::decode_qs(req.body());
+    let form = uri::decode_form_urlencoded(req.body());
 
     let username = alt form.find("username") {
       none {
@@ -35,7 +35,7 @@ fn signup(req: @request<app::data>, rep: @response, f: fn(str, str)) {
 }
 
 fn login(req: @request<app::data>, rep: @response, f: fn(str, str)) {
-    let form = uri::decode_qs(req.body());
+    let form = uri::decode_form_urlencoded(req.body());
 
     let username = alt form.find("username") {
       none {
@@ -57,7 +57,7 @@ fn login(req: @request<app::data>, rep: @response, f: fn(str, str)) {
 }
 
 fn post(req: @request<app::data>, rep: @response, f: fn(str, str)) {
-    let form = uri::decode_qs(req.body());
+    let form = uri::decode_form_urlencoded(req.body());
 
     let title = alt form.find("title") {
       none {
@@ -89,7 +89,7 @@ fn post(req: @request<app::data>, rep: @response, f: fn(str, str)) {
 }
 
 fn comment(req: @request<app::data>, rep: @response, f: fn(str)) {
-    let form = uri::decode_qs(req.body());
+    let form = uri::decode_form_urlencoded(req.body());
 
     let body = alt form.find("body") {
       none {
