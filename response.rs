@@ -1,4 +1,5 @@
 import cookie::cookie;
+import to_bytes::to_bytes;
 
 type response = {
     mut code: uint,
@@ -86,7 +87,8 @@ impl response for @response {
         self.reply(rep);
     }
 
-    fn reply_http(code: uint, status: str, body: [u8]) {
+    fn reply_http<T: to_bytes>(code: uint, status: str, body: T) {
+        let body = body.to_bytes();
         self.set_status(code, status);
         self.set_len(body.len());
         self.reply_head();
@@ -96,166 +98,166 @@ impl response for @response {
 
     fn redirect(location: str) {
         self.set_header("Location", location);
-        self.reply_http(302u, "Found", [])
+        self.reply_http(302u, "Found", "")
     }
 
-    fn http_100() {
-        self.reply_http(100u, "Continue", [])
+    fn http_100<T: to_bytes>(body: T) {
+        self.reply_http(100u, "Continue", body)
     }
 
-    fn http_101() {
-        self.reply_http(101u, "Switching Protocols", [])
+    fn http_101<T: to_bytes>(body: T) {
+        self.reply_http(101u, "Switching Protocols", body)
     }
 
-    fn http_200(body: [u8]) {
+    fn http_200<T: to_bytes>(body: T) {
         self.reply_http(200u, "OK", body)
     }
 
-    fn http_201() {
-        self.reply_http(201u, "Created", [])
+    fn http_201<T: to_bytes>(body: T) {
+        self.reply_http(201u, "Created", body)
     }
 
-    fn http_202() {
-        self.reply_http(202u, "Accepted", [])
+    fn http_202<T: to_bytes>(body: T) {
+        self.reply_http(202u, "Accepted", body)
     }
 
-    fn http_203() {
-        self.reply_http(203u, "Non-Authoritative Information", [])
+    fn http_203<T: to_bytes>(body: T) {
+        self.reply_http(203u, "Non-Authoritative Information", body)
     }
 
-    fn http_204() {
-        self.reply_http(204u, "No Content", [])
+    fn http_204<T: to_bytes>(body: T) {
+        self.reply_http(204u, "No Content", body)
     }
 
-    fn http_205() {
-        self.reply_http(205u, "Reset Content", [])
+    fn http_205<T: to_bytes>(body: T) {
+        self.reply_http(205u, "Reset Content", body)
     }
 
-    fn http_206() {
-        self.reply_http(206u, "Partial Content", [])
+    fn http_206<T: to_bytes>(body: T) {
+        self.reply_http(206u, "Partial Content", body)
     }
 
-    fn http_300() {
-        self.reply_http(300u, "Multiple Choices", [])
+    fn http_300<T: to_bytes>(body: T) {
+        self.reply_http(300u, "Multiple Choices", body)
     }
 
-    fn http_301() {
-        self.reply_http(301u, "Moved Permanently", [])
+    fn http_301<T: to_bytes>(body: T) {
+        self.reply_http(301u, "Moved Permanently", body)
     }
 
-    fn http_302() {
-        self.reply_http(302u, "Found", [])
+    fn http_302<T: to_bytes>(body: T) {
+        self.reply_http(302u, "Found", body)
     }
 
-    fn http_303() {
-        self.reply_http(303u, "See Other", [])
+    fn http_303<T: to_bytes>(body: T) {
+        self.reply_http(303u, "See Other", body)
     }
 
-    fn http_304() {
-        self.reply_http(304u, "Not Modified", [])
+    fn http_304<T: to_bytes>(body: T) {
+        self.reply_http(304u, "Not Modified", body)
     }
 
-    fn http_305() {
-        self.reply_http(305u, "Use Proxy", [])
+    fn http_305<T: to_bytes>(body: T) {
+        self.reply_http(305u, "Use Proxy", body)
     }
 
-    fn http_307() {
-        self.reply_http(305u, "Temporary Redirect", [])
+    fn http_307<T: to_bytes>(body: T) {
+        self.reply_http(305u, "Temporary Redirect", body)
     }
 
-    fn http_400(body: [u8]) {
+    fn http_400<T: to_bytes>(body: T) {
         self.reply_http(400u, "Bad Request", body)
     }
 
-    fn http_401() {
-        self.reply_http(401u, "Unauthorized", [])
+    fn http_401<T: to_bytes>(body: T) {
+        self.reply_http(401u, "Unauthorized", body)
     }
 
-    fn http_402() {
-        self.reply_http(402u, "Payment Required", [])
+    fn http_402<T: to_bytes>(body: T) {
+        self.reply_http(402u, "Payment Required", body)
     }
 
-    fn http_403() {
-        self.reply_http(403u, "Forbidden", [])
+    fn http_403<T: to_bytes>(body: T) {
+        self.reply_http(403u, "Forbidden", body)
     }
 
-    fn http_404() {
-        self.reply_http(404u, "Not Found", [])
+    fn http_404<T: to_bytes>(body: T) {
+        self.reply_http(404u, "Not Found", body)
     }
 
-    fn http_405() {
-        self.reply_http(405u, "Method Not Allowed", [])
+    fn http_405<T: to_bytes>(body: T) {
+        self.reply_http(405u, "Method Not Allowed", body)
     }
 
-    fn http_406() {
-        self.reply_http(406u, "Not Acceptable", [])
+    fn http_406<T: to_bytes>(body: T) {
+        self.reply_http(406u, "Not Acceptable", body)
     }
 
-    fn http_407() {
-        self.reply_http(407u, "Proxy Authentication Required", [])
+    fn http_407<T: to_bytes>(body: T) {
+        self.reply_http(407u, "Proxy Authentication Required", body)
     }
 
-    fn http_408() {
-        self.reply_http(408u, "Request Timeout", [])
+    fn http_408<T: to_bytes>(body: T) {
+        self.reply_http(408u, "Request Timeout", body)
     }
 
-    fn http_409() {
-        self.reply_http(409u, "Conflict", [])
+    fn http_409<T: to_bytes>(body: T) {
+        self.reply_http(409u, "Conflict", body)
     }
 
-    fn http_410() {
-        self.reply_http(410u, "Gone", [])
+    fn http_410<T: to_bytes>(body: T) {
+        self.reply_http(410u, "Gone", body)
     }
 
-    fn http_411() {
-        self.reply_http(411u, "Length Required", [])
+    fn http_411<T: to_bytes>(body: T) {
+        self.reply_http(411u, "Length Required", body)
     }
 
-    fn http_412() {
-        self.reply_http(412u, "Precondition Failed", [])
+    fn http_412<T: to_bytes>(body: T) {
+        self.reply_http(412u, "Precondition Failed", body)
     }
 
-    fn http_413() {
-        self.reply_http(413u, "Request Entity Too Large", [])
+    fn http_413<T: to_bytes>(body: T) {
+        self.reply_http(413u, "Request Entity Too Large", body)
     }
 
-    fn http_414() {
-        self.reply_http(414u, "Request-URI Too Long", [])
+    fn http_414<T: to_bytes>(body: T) {
+        self.reply_http(414u, "Request-URI Too Long", body)
     }
 
-    fn http_415() {
-        self.reply_http(415u, "Unsupported Media Type", [])
+    fn http_415<T: to_bytes>(body: T) {
+        self.reply_http(415u, "Unsupported Media Type", body)
     }
 
-    fn http_416() {
-        self.reply_http(416u, "Requested Range Not Satisifiable", [])
+    fn http_416<T: to_bytes>(body: T) {
+        self.reply_http(416u, "Requested Range Not Satisifiable", body)
     }
 
-    fn http_417() {
-        self.reply_http(417u, "Expectation Failed", [])
+    fn http_417<T: to_bytes>(body: T) {
+        self.reply_http(417u, "Expectation Failed", body)
     }
 
-    fn http_500(body: [u8]) {
+    fn http_500<T: to_bytes>(body: T) {
         self.reply_http(500u, "Internal Server Error", body)
     }
 
-    fn http_501() {
-        self.reply_http(501u, "Not Implemented", [])
+    fn http_501<T: to_bytes>(body: T) {
+        self.reply_http(501u, "Not Implemented", body)
     }
 
-    fn http_502() {
-        self.reply_http(502u, "Bad Gateway", [])
+    fn http_502<T: to_bytes>(body: T) {
+        self.reply_http(502u, "Bad Gateway", body)
     }
 
-    fn http_503() {
-        self.reply_http(503u, "Service Unavailable", [])
+    fn http_503<T: to_bytes>(body: T) {
+        self.reply_http(503u, "Service Unavailable", body)
     }
 
-    fn http_504() {
-        self.reply_http(504u, "Gateway Timeout", [])
+    fn http_504<T: to_bytes>(body: T) {
+        self.reply_http(504u, "Gateway Timeout", body)
     }
 
-    fn http_505() {
-        self.reply_http(505u, "HTTP Version Not Supported", [])
+    fn http_505<T: to_bytes>(body: T) {
+        self.reply_http(505u, "HTTP Version Not Supported", body)
     }
 }

@@ -21,6 +21,7 @@ mod response;
 mod router;
 mod session;
 mod user;
+mod to_bytes;
 
 import io::{reader, reader_util, writer, writer_util};
 import result::{result, ok, err};

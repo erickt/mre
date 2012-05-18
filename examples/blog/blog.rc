@@ -18,6 +18,7 @@ import mre::{cookie, model, session, user};
 import mre::request::request;
 import mre::response::response;
 import mre::session::session;
+import mre::to_bytes::to_bytes;
 import mustache::to_mustache;
 import zmq::error;
 

@@ -6,6 +6,8 @@ import request::request;
 import response::response;
 import middleware::middleware;
 
+import to_bytes::to_bytes;
+
 type mre<T> = {
     m2: mongrel2::connection,
     router: router::router<T>,
@@ -34,7 +36,7 @@ impl mre<T: copy> for mre<T> {
               ok(req) { req }
               err(e) {
                 // Ignore this request if it's malformed.
-                rep.http_400(str::bytes(e));
+                rep.http_400(e);
                 cont;
               }
             };
@@ -47,12 +49,12 @@ impl mre<T: copy> for mre<T> {
             alt req.find_header("METHOD") {
               none {
                 // Error out the request if we didn't get a method.
-                rep.http_400(str::bytes("missing method"))
+                rep.http_400("missing method")
               }
 
               some(method) {
                 alt self.router.find(method, req.path()) {
-                  none { rep.http_404() }
+                  none { rep.http_404("") }
 
                   some((handler, m)) { handler(req, rep, m) }
                 };

@@ -15,7 +15,7 @@ impl of to_mustache for user::user {
         import user::user;
 
         hash_from_strs([
-            ("user_id", self.user_id())
+            ("user_id", self.id())
         ]).to_mustache()
     }
 }
@@ -106,7 +106,7 @@ fn routes(app: app::app) {
         forms::login(req, rep) { |username, password|
             import user::user;
             alt login(app, username, password) {
-              none { rep.http_401() }
+              none { rep.http_401("") }
               some(user) {
                 // Destroy any old sessions.
                 alt req.data.session {
@@ -165,7 +165,7 @@ fn routes(app: app::app) {
         let id = m.named("id");
 
         alt user::find(app.es, "blog", id) {
-          none { rep.http_404() }
+          none { rep.http_404("") }
           some(user) {
             rep.render_200(app.mu, "user_show", hash_from_strs([
                 ("user", user.to_mustache())
@@ -179,7 +179,7 @@ fn routes(app: app::app) {
         let id = m.named("id");
 
         alt user::find(app.es, "blog", id) {
-          none { rep.http_404() }
+          none { rep.http_404("") }
           some(user) {
             user.delete();
 
@@ -212,7 +212,7 @@ fn routes(app: app::app) {
         let id = m.named("id");
 
         alt post::find(app.es, id) {
-          none { rep.http_404() }
+          none { rep.http_404("") }
           some(post) {
             let comments = post.find_comments();
 
@@ -230,7 +230,7 @@ fn routes(app: app::app) {
         let id = m.named("id");
 
         alt post::find(app.es, id) {
-          none { rep.http_404() }
+          none { rep.http_404("") }
           some(post) {
             rep.render_200(app.mu, "post_edit", hash_from_strs([
                 ("post_id", id.to_mustache()),
@@ -244,7 +244,7 @@ fn routes(app: app::app) {
         let post_id = m.named("id");
 
         alt post::find(app.es, post_id) {
-          none { rep.http_404() }
+          none { rep.http_404("") }
           some(post) {
             forms::post(req, rep) { |title, body|
                 post.set_title(title);
@@ -262,7 +262,7 @@ fn routes(app: app::app) {
     // Delete a post.
     app.post("^/posts/(?<id>[-_A-Za-z0-9]+)/delete$") { |_req, rep, m|
         alt post::find(app.es, m.named("id")) {
-          none { rep.http_404() }
+          none { rep.http_404("") }
           some(post) {
             post.delete();
 
@@ -276,7 +276,7 @@ fn routes(app: app::app) {
         let id = m.named("id");
 
         alt post::find(app.es, id) {
-          none { rep.http_404() }
+          none { rep.http_404("") }
           some(post) {
             forms::comment(req, rep) { |body|
                 let comment = comment::comment(app.es, id, "");
@@ -297,7 +297,7 @@ fn routes(app: app::app) {
         let comment_id = m.named("id");
 
         alt comment::find(app.es, post_id, comment_id) {
-          none { rep.http_404() }
+          none { rep.http_404("") }
           some(comment) {
             rep.render_200(app.mu, "comment_edit", hash_from_strs([
                 ("post_id", post_id.to_mustache()),
@@ -312,7 +312,7 @@ fn routes(app: app::app) {
         let comment_id = m.named("id");
 
         alt comment::find(app.es, post_id, comment_id) {
-          none { rep.http_404() }
+          none { rep.http_404("") }
           some(comment) {
             forms::comment(req, rep) { |body|
                 comment.set_body(body);
@@ -332,7 +332,7 @@ fn routes(app: app::app) {
         let comment_id = m.named("id");
 
         alt comment::find(app.es, post_id, comment_id) {
-          none { rep.http_404() }
+          none { rep.http_404("") }
           some(comment) {
             comment.delete();
 

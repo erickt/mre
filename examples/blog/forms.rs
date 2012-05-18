@@ -3,7 +3,7 @@ fn signup(req: @request<app::data>, rep: @response, f: fn(str, str)) {
 
     let username = alt form.find("username") {
       none {
-        rep.http_400(str::bytes("missing username"));
+        rep.http_400("missing username");
         ret;
 
       }
@@ -12,7 +12,7 @@ fn signup(req: @request<app::data>, rep: @response, f: fn(str, str)) {
 
     let password = alt form.find("password") {
       none {
-        rep.http_400(str::bytes("missing password"));
+        rep.http_400("missing password");
         ret;
       }
       some(passwords) { passwords[0] }
@@ -20,14 +20,14 @@ fn signup(req: @request<app::data>, rep: @response, f: fn(str, str)) {
 
     let password_confirm = alt form.find("password_confirm") {
       none {
-        rep.http_400(str::bytes("missing password confirmation"));
+        rep.http_400("missing password confirmation");
         ret;
       }
       some(password_confirms) { password_confirms[0] }
     };
 
     if password != password_confirm {
-        rep.http_400(str::bytes("invalid password confirmation"));
+        rep.http_400("invalid password confirmation");
         ret;
     }
 
@@ -39,7 +39,7 @@ fn login(req: @request<app::data>, rep: @response, f: fn(str, str)) {
 
     let username = alt form.find("username") {
       none {
-        rep.http_400(str::bytes("missing username"));
+        rep.http_400("missing username");
         ret;
       }
       some(usernames) { usernames[0] }
@@ -47,7 +47,7 @@ fn login(req: @request<app::data>, rep: @response, f: fn(str, str)) {
 
     let password = alt form.find("password") {
       none {
-        rep.http_400(str::bytes("missing password"));
+        rep.http_400("missing password");
         ret;
       }
       some(passwords) { passwords[0] }
@@ -61,27 +61,27 @@ fn post(req: @request<app::data>, rep: @response, f: fn(str, str)) {
 
     let title = alt form.find("title") {
       none {
-        rep.http_400(str::bytes("missing title"));
+        rep.http_400("missing title");
         ret;
       }
       some(titles) { titles[0] }
     };
 
     if title.trim() == "" {
-        rep.http_400(str::bytes("cannot have an empty title"));
+        rep.http_400("cannot have an empty title");
         ret;
     }
 
     let body = alt form.find("body") {
       none {
-        rep.http_400(str::bytes("missing body"));
+        rep.http_400("missing body");
         ret;
       }
       some(bodys) { bodys[0] }
     };
 
     if body.trim() == "" {
-        rep.http_400(str::bytes("cannot have an empty body"));
+        rep.http_400("cannot have an empty body");
         ret;
     }
 
@@ -93,14 +93,14 @@ fn comment(req: @request<app::data>, rep: @response, f: fn(str)) {
 
     let body = alt form.find("body") {
       none {
-        rep.http_400(str::bytes("missing body"));
+        rep.http_400("missing body");
         ret;
       }
       some(bodys) { bodys[0] }
     };
 
     if body.trim() == "" {
-        rep.http_400(str::bytes("cannot have an empty body"));
+        rep.http_400("cannot have an empty body");
         ret;
     }
 
