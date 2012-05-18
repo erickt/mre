@@ -111,14 +111,92 @@ fn all(es: client, index: str, typ: str) -> [model] {
 }
 
 impl model for model {
+    fn set_null(key: str) -> bool {
+        self.source.insert(key, json::null)
+    }
+
+    fn get_bool(key: str) -> bool {
+        alt self.find_bool(key) {
+          none { fail }
+          some(value) { value }
+        }
+    }
+
+    fn find_bool(key: str) -> option<bool> {
+        self.source.find(key).chain { |value|
+            alt value {
+              json::boolean(value) { some(value) }
+              _ { none }
+            }
+        }
+    }
+
+    fn set_bool(key: str, value: bool) -> bool {
+        self.source.insert(key, json::boolean(value))
+    }
+
+    fn find_str(key: str) -> option<str> {
+        self.source.find(key).chain { |value|
+            alt value {
+              json::string(value) { some(value) }
+              _ { none }
+            }
+        }
+    }
+
     fn get_str(key: str) -> str {
-        self.source.find(key).map_default("") { |value|
-            alt check value { json::string(value) { value } }
+        alt self.find_str(key) {
+          none { fail }
+          some(value) { value }
         }
     }
 
     fn set_str(key: str, value: str) -> bool {
         self.source.insert(key, json::string(value))
+    }
+
+    fn find_float(key: str) -> option<float> {
+        self.source.find(key).chain { |value|
+            alt value {
+              json::num(value) { some(value) }
+              _ { none }
+            }
+        }
+    }
+
+    fn get_float(key: str) -> float {
+        alt self.find_float(key) {
+          none { fail }
+          some(value) { value }
+        }
+    }
+
+    fn set_float(key: str, value: float) -> bool {
+        self.source.insert(key, json::num(value))
+    }
+
+    fn find_uint(key: str) -> option<uint> {
+        self.find_float(key).map { |value| value as uint }
+    }
+
+    fn get_uint(key: str) -> uint {
+        self.get_float(key) as uint
+    }
+
+    fn set_uint(key: str, value: uint) -> bool {
+        self.set_float(key, value as float)
+    }
+
+    fn find_int(key: str) -> option<int> {
+        self.find_float(key).map { |value| value as int }
+    }
+
+    fn get_int(key: str) -> int {
+        self.get_float(key) as int
+    }
+
+    fn set_int(key: str, value: int) -> bool {
+        self.set_float(key, value as float)
     }
 
     fn index(op_type: elasticsearch::op_type) -> result<(str, uint), str> {
