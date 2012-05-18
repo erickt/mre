@@ -118,7 +118,7 @@ fn routes(app: app::app) {
                 }
 
                 // Create a new session.
-                let session = session::session(app.es, "blog", user.user_id());
+                let session = session::session(app.es, "blog", user.id());
 
                 alt session.create() {
                   ok((id, _version)) {

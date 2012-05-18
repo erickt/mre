@@ -8,7 +8,7 @@ export find;
 export all;
 
 iface user {
-    fn user_id() -> str;
+    fn id() -> str;
 
     fn password() -> str;
     fn set_password(hasher: hasher, password: str) -> bool;
@@ -22,7 +22,7 @@ iface user {
 
 fn mk_user(model: model) -> user {
     impl of user for model {
-        fn user_id() -> str {
+        fn id() -> str {
             self._id
         }
 
