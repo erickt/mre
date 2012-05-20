@@ -1,10 +1,10 @@
 type request<T> = {
-    req: mongrel2::request,
+    req: @mongrel2::request,
     cookies: hashmap<str, cookie::cookie>,
     mut data: T,
 };
 
-fn request<T: copy>(req: mongrel2::request,
+fn request<T: copy>(req: @mongrel2::request,
                     data: T) -> result<@request<T>, str> {
     let cookies = alt req.headers.find("cookie") {
       none { str_hash() }

@@ -8,7 +8,7 @@ type response = {
     mut end: fn@(),
 };
 
-fn response(m2: mongrel2::connection, req: mongrel2::request) -> @response {
+fn response(m2: mongrel2::connection, req: @mongrel2::request) -> @response {
     @{
         mut code: 200u,
         mut status: "OK",
