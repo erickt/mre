@@ -50,7 +50,7 @@ impl render_200 for @response {
         };
 
         let template = mu.render_file(path, data);
-        self.http_200(str::bytes(template))
+        self.http_200(template)
     }
 }
 
@@ -73,7 +73,7 @@ fn routes(app: app::app) {
         rep.render_200(app.mu, "index", hash_from_strs([
             ("user", req.data.user.to_mustache()),
             ("posts", posts.to_mustache())
-        ]).to_mustache())
+        ]))
     }
 
     // Create a user.
@@ -156,8 +156,8 @@ fn routes(app: app::app) {
 
         // This can be simplified after mozilla/rust/issues/2258 is fixed.
         rep.render_200(app.mu, "user_index", hash_from_strs([
-            ("users", users.to_mustache())
-        ]).to_mustache())
+            ("users", users)
+        ]))
     }
 
     // Show a user.
@@ -168,8 +168,8 @@ fn routes(app: app::app) {
           none { rep.http_404("") }
           some(user) {
             rep.render_200(app.mu, "user_show", hash_from_strs([
-                ("user", user.to_mustache())
-            ]).to_mustache())
+                ("user", user)
+            ]))
           }
         }
     }
@@ -220,7 +220,7 @@ fn routes(app: app::app) {
                 ("post_id", id.to_mustache()),
                 ("post", post.to_mustache()),
                 ("comments", comments.to_mustache())
-            ]).to_mustache())
+            ]))
           }
         }
     }
@@ -235,7 +235,7 @@ fn routes(app: app::app) {
             rep.render_200(app.mu, "post_edit", hash_from_strs([
                 ("post_id", id.to_mustache()),
                 ("post", post.to_mustache())
-            ]).to_mustache())
+            ]))
           }
         }
     }
@@ -302,7 +302,7 @@ fn routes(app: app::app) {
             rep.render_200(app.mu, "comment_edit", hash_from_strs([
                 ("post_id", post_id.to_mustache()),
                 ("comment", comment.to_mustache())
-            ]).to_mustache())
+            ]))
           }
         }
     }
