@@ -62,11 +62,11 @@ fn app() -> app {
 
 impl app for app {
     fn get(regex: str, f: mre::router::handler<data>) {
-        self.mre.router.add("GET", regex, f)
+        self.mre.router.add(mre::request::GET, regex, f)
     }
 
     fn post(regex: str, f: mre::router::handler<data>) {
-        self.mre.router.add("POST", regex, f)
+        self.mre.router.add(mre::request::POST, regex, f)
     }
 
     fn run() {

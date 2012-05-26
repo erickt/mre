@@ -1,10 +1,10 @@
-import request::request;
+import request::{method, request};
 import response::response;
 
 type handler<T> = fn@(@request<T>, @response, pcre::match);
 
 type router<T> = {
-    mut routes: [(str, @pcre::pcre, handler<T>)],
+    mut routes: [(method, @pcre::pcre, handler<T>)],
 };
 
 fn router<T>() -> router<T> {
@@ -12,18 +12,18 @@ fn router<T>() -> router<T> {
 }
 
 impl router<T> for router<T> {
-    fn add(method: str, pattern: str, handler: handler<T>) {
+    fn add(method: method, pattern: str, handler: handler<T>) {
         self.routes += [(method, @pcre::mk_pcre(pattern), handler)];
     }
 
-    fn add_patterns(items: [(str, str, handler<T>)]) {
+    fn add_patterns(items: [(method, str, handler<T>)]) {
         vec::iter(items) { |item|
             let (method, pattern, handler) = item;
             self.add(method, pattern, handler)
         };
     }
 
-    fn find(method: str, path: str) -> option<(handler<T>, pcre::match)> {
+    fn find(method: method, path: str) -> option<(handler<T>, pcre::match)> {
         for self.routes.each() { |item|
             let (meth, regex, handler) = item;
 
@@ -41,9 +41,10 @@ impl router<T> for router<T> {
 #[cfg(test)]
 mod tests {
     import pcre::match;
+    import request::GET;
 
-    fn check_path(router: router, method: str, path: str, f: handler,
-                  captures: [str]) {
+    fn check_path<T>(router: router<T>, method: method, path: str,
+                     f: handler<T>, captures: [str]) {
         let (handler, m) = router.find(method, path).get();
         assert handler == f;
         assert m.substrings() == captures;
@@ -51,31 +52,29 @@ mod tests {
 
     #[test]
     fn test_router() {
-        let router = router();
-        router.find("GET", "") == none;
-        router.find("GET", "/foo/bar/baz") == none;
+        let router = router::<()>();
+        router.find(GET, "") == none;
+        router.find(GET, "/foo/bar/baz") == none;
 
-        let a = { |req, _m| response::http_200(req, []) };
-        let b = { |req, _m| response::http_200(req, []) };
-        let c = { |req, _m| response::http_200(req, []) };
-        let d = { |req, _m| response::http_200(req, []) };
-        let z = { |req, _m| response::http_200(req, []) };
+        let a = { |_req, rep: @response, _m| rep.http_200("") };
+        let b = { |_req, rep: @response, _m| rep.http_200("") };
+        let c = { |_req, rep: @response, _m| rep.http_200("") };
+        let d = { |_req, rep: @response, _m| rep.http_200("") };
+        let z = { |_req, rep: @response, _m| rep.http_200("") };
 
         router.add_patterns([
-            ("GET", "^/$", a),
-            ("GET", "^/foo$", b),
-            ("GET", "^/foo/bar/baz$", c),
-            ("GET", "^/([^\\/]+)/(.*)$", d),
-            ("GET", "", z)
+            (GET, "^/$", a),
+            (GET, "^/foo$", b),
+            (GET, "^/foo/bar/baz$", c),
+            (GET, "^/([^\\/]+)/(.*)$", d),
+            (GET, "", z)
         ]);
 
-        check_path(router, "GET", "/", a, []);
-        check_path(router, "GET", "/foo", b, []);
-        check_path(router, "GET", "/foo/bar/baz", c, []);
-        check_path(router, "GET", "/a12/b34", d, ["a12", "b34"]);
-        check_path(router, "GET", "/a12/b34/c/d", d, ["a12", "b34/c/d"]);
-        check_path(router, "GET", "lalala", z, []);
-
-
+        check_path(router, GET, "/", a, []);
+        check_path(router, GET, "/foo", b, []);
+        check_path(router, GET, "/foo/bar/baz", c, []);
+        check_path(router, GET, "/a12/b34", d, ["a12", "b34"]);
+        check_path(router, GET, "/a12/b34/c/d", d, ["a12", "b34/c/d"]);
+        check_path(router, GET, "lalala", z, []);
     }
 }

@@ -37,30 +37,19 @@ impl mre<T: copy> for mre<T> {
 
             let rep = response::response(self.m2, m2_req);
 
-            let req = alt request::request(m2_req, self.mk_data()) {
-              ok(req) { req }
-              err(e) {
+            let req = alt request::request(m2_req, rep, self.mk_data()) {
+              none {
                 // Ignore this request if it's malformed.
-                rep.http_400(e);
                 cont;
               }
+              some(req) { req }
             };
 
             self.middleware.wrap(req, rep);
 
-            alt req.find_header("METHOD") {
-              none {
-                // Error out the request if we didn't get a method.
-                rep.http_400("missing method")
-              }
-
-              some(method) {
-                alt self.router.find(method, req.path()) {
-                  none { rep.http_404("") }
-
-                  some((handler, m)) { handler(req, rep, m) }
-                };
-              }
+            alt self.router.find(req.method, req.path()) {
+              none { rep.http_404("") }
+              some((handler, m)) { handler(req, rep, m) }
             };
         }
     }
