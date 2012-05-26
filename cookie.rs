@@ -249,13 +249,13 @@ mod tests {
 
     #[test]
     fn test_is_value() {
-        assert !cookie_parser::is_value("");
         assert !cookie_parser::is_value("\"");
         assert !cookie_parser::is_value("\"a");
         assert !cookie_parser::is_value("foo bar");
         assert !cookie_parser::is_value("foo\"");
         assert !cookie_parser::is_value("\"foo");
 
+        assert cookie_parser::is_value("");
         assert cookie_parser::is_value("\"\"");
         assert cookie_parser::is_value("foo");;
         assert cookie_parser::is_value("\"foo\"");;
