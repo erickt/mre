@@ -8,7 +8,7 @@ type data = {
     mut user: option<mre::user::user>,
 };
 
-type app = {
+type app = @{
     zmq: zmq::context,
     m2: mongrel2::connection,
     mre: mre::mre<data>,
@@ -50,7 +50,7 @@ fn app() -> app {
 
     let mu = mustache::context("views", ".mustache");
 
-    {
+    @{
         zmq: zmq,
         m2: m2,
         mre: mre,

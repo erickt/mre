@@ -11,7 +11,7 @@ export find;
 export search;
 export all;
 
-type model = {
+type model = @{
     es: client,
     _index: str,
     _type: str,
@@ -22,7 +22,7 @@ type model = {
 };
 
 fn model(es: client, index: str, typ: str, id: str) -> model {
-    {
+    @{
         es: es,
         _index: index,
         _type: typ,
@@ -50,7 +50,7 @@ fn hit_to_model(es: client, hit: hashmap<str, json::json>) -> model {
       json::dict(source) { source }
     };
 
-    {
+    @{
         es: es,
         _index: index,
         _type: typ,
