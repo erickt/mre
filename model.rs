@@ -64,6 +64,11 @@ fn hit_to_model(es: client, hit: hashmap<str, json::json>) -> model {
 fn find(es: client, index: str, typ: str, id: str) -> option<model> {
     let rep = es.get(index, typ, id);
 
+    // Fail if ES had an error.
+    if rep.code != 200u {
+        fail json::to_str(rep.body);
+    }
+
     let hit = alt check rep.body { json::dict(hit) { hit } };
 
     alt hit.get("exists") {
@@ -77,6 +82,11 @@ fn search(es: client, f: fn(search_builder)) -> [model] {
     f(bld);
 
     let rep = bld.execute();
+
+    // Fail if ES had an error.
+    if rep.code != 200u {
+        fail json::to_str(rep.body);
+    }
 
     alt check rep.body {
       json::dict(body) {
