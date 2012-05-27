@@ -54,7 +54,8 @@ fn session<T>(es: elasticsearch::client,
               session_index: str,
               user_index: str,
               cookie_name: str,
-              f: fn@(@request<T>, session::session, user::user)) -> wrapper<T> {
+              f: fn@(@request<T>, session::session, user::user))
+  -> wrapper<T> {
     { |req: @request<T>, rep: @response|
         req.cookies.find(cookie_name).iter { |cookie|
             alt session::find(es, session_index, cookie.value) {
@@ -70,9 +71,7 @@ fn session<T>(es: elasticsearch::client,
                     session.delete();
                     rep.clear_cookie(cookie_name);
                   }
-                  some(user) {
-                      f(req, session, user);
-                  }
+                  some(user) { f(req, session, user); }
                 }
               }
             }
