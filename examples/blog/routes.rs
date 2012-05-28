@@ -153,8 +153,6 @@ fn routes(app: app::app) {
     app.get("^/users$") { |_req, rep, _m|
         let users = user::all(app.es, "blog");
 
-        #error("%?", users);
-
         // This can be simplified after mozilla/rust/issues/2258 is fixed.
         rep.render_200(app.mu, "user_index", hash_from_strs([
             ("users", users)

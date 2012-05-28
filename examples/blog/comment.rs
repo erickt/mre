@@ -96,7 +96,7 @@ fn find_by_post(es: client, post_id: str) -> [comment] {
 }
 
 fn delete_by_post(es: client, post_id: str) {
-    let rep = es.prepare_delete_by_query()
+    es.prepare_delete_by_query()
         .set_indices(["blog"])
         .set_types(["comment"])
         .set_source(*json_dict_builder()
@@ -104,6 +104,4 @@ fn delete_by_post(es: client, post_id: str) {
                 bld.insert_str("_parent", post_id);
             }
         ).execute();
-
-    #error("%?", rep);
 }
