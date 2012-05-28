@@ -7,7 +7,7 @@ export all;
 export find_by_user;
 
 iface post {
-    fn post_id() -> str;
+    fn id() -> str;
 
     fn user_id() -> str;
     fn set_user_id(user_id: str) -> bool;
@@ -18,8 +18,8 @@ iface post {
     fn body() -> str;
     fn set_body(body: str) -> bool;
 
-    fn create() -> result<(str, uint), error>;
-    fn save() -> result<(str, uint), error>;
+    fn create() -> result<(), error>;
+    fn save() -> result<(), error>;
 
     fn delete();
 
@@ -28,7 +28,7 @@ iface post {
 
 fn mk_post(model: model) -> post {
     impl of post for model {
-        fn post_id() -> str {
+        fn id() -> str {
             self._id
         }
 
@@ -56,12 +56,12 @@ fn mk_post(model: model) -> post {
             self.set_str("body", body)
         }
 
-        fn create() -> result<(str, uint), error> {
+        fn create() -> result<(), error> {
             import model::model;
             self.create()
         }
 
-        fn save() -> result<(str, uint), error> {
+        fn save() -> result<(), error> {
             import model::model;
             self.save()
         }
@@ -72,7 +72,7 @@ fn mk_post(model: model) -> post {
         }
 
         fn find_comments() -> [comment::comment] {
-            comment::find_by_post(self.es, self._id)
+            comment::find_by_post(self.es, copy self._id)
         }
     }
     

@@ -14,8 +14,8 @@ iface user {
     fn set_password(hasher: hasher, password: str) -> bool;
     fn verify_password(hasher: hasher, password: str) -> bool;
 
-    fn create() -> result<(str, uint), error>;
-    fn save() -> result<(str, uint), error>;
+    fn create() -> result<(), error>;
+    fn save() -> result<(), error>;
 
     fn delete();
 }
@@ -39,12 +39,12 @@ fn mk_user(model: model) -> user {
             hasher.verify(password, self.password())
         }
 
-        fn create() -> result<(str, uint), error> {
+        fn create() -> result<(), error> {
             import model::model;
             self.create()
         }
 
-        fn save() -> result<(str, uint), error> {
+        fn save() -> result<(), error> {
             import model::model;
             self.save()
         }

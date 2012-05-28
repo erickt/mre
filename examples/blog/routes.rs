@@ -26,7 +26,7 @@ impl of to_mustache for post::post {
         import post::post;
 
         hash_from_strs([
-            ("post_id", self.post_id()),
+            ("post_id", self.id()),
             ("title", self.title()),
             ("body", self.body())
         ]).to_mustache()
@@ -38,7 +38,7 @@ impl of to_mustache for comment::comment {
         import comment::comment;
 
         hash_from_strs([
-            ("comment_id", self.comment_id()),
+            ("comment_id", self.id()),
             ("body", self.body())
         ]).to_mustache()
     }
@@ -91,7 +91,7 @@ fn routes(app: app::app) {
                                   username, password);
 
             alt user.create() {
-              ok((id, _)) { rep.reply_redirect("/") }
+              ok(()) { rep.reply_redirect("/") }
               err(e) { rep.reply_http(400u, e) }
             }
         }
@@ -122,8 +122,8 @@ fn routes(app: app::app) {
                 let session = session::session(app.es, "blog", user.id());
 
                 alt session.create() {
-                  ok((id, _version)) {
-                    let cookie = cookie::cookie("session", id);
+                  ok(()) {
+                    let cookie = cookie::cookie("session", session.id());
                     rep.set_cookie(cookie);
                     rep.reply_redirect("/")
                   }
@@ -202,7 +202,7 @@ fn routes(app: app::app) {
             post.set_body(body);
 
             alt post.save() {
-              ok((id, _version)) { rep.reply_redirect("/posts/" + id) }
+              ok(()) { rep.reply_redirect("/posts/" + post.id()) }
               err(e) { rep.reply_http(500u, e) }
             }
         }

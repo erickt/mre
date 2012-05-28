@@ -8,8 +8,8 @@ iface session {
     fn user_id() -> str;
     fn set_user_id(user_id: str) -> bool;
 
-    fn create() -> result<(str, uint), error>;
-    fn save() -> result<(str, uint), error>;
+    fn create() -> result<(), error>;
+    fn save() -> result<(), error>;
 
     fn delete();
 }
@@ -23,12 +23,12 @@ fn mk_session(model: model) -> session {
             self.set_str("user_id", user_id)
         }
 
-        fn create() -> result<(str, uint), error> {
+        fn create() -> result<(), error> {
             import model::model;
             self.create()
         }
 
-        fn save() -> result<(str, uint), error> {
+        fn save() -> result<(), error> {
             import model::model;
             self.save()
         }

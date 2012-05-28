@@ -7,7 +7,7 @@ export find_by_post;
 export delete_by_post;
 
 iface comment {
-    fn comment_id() -> str;
+    fn id() -> str;
 
     fn user_id() -> str;
     fn set_user_id(user_id: str) -> bool;
@@ -15,15 +15,15 @@ iface comment {
     fn body() -> str;
     fn set_body(body: str) -> bool;
 
-    fn create() -> result<(str, uint), error>;
-    fn save() -> result<(str, uint), error>;
+    fn create() -> result<(), error>;
+    fn save() -> result<(), error>;
 
     fn delete();
 }
 
 fn mk_comment(model: model) -> comment {
     impl of comment for model {
-        fn comment_id() -> str {
+        fn id() -> str {
             self._id
         }
 
@@ -43,12 +43,12 @@ fn mk_comment(model: model) -> comment {
             self.set_str("body", body)
         }
 
-        fn create() -> result<(str, uint), error> {
+        fn create() -> result<(), error> {
             import model::model;
             self.create()
         }
 
-        fn save() -> result<(str, uint), error> {
+        fn save() -> result<(), error> {
             import model::model;
             self.save()
         }
@@ -64,13 +64,16 @@ fn mk_comment(model: model) -> comment {
 
 fn comment(es: client, post_id: str, id: str) -> comment {
     let model = model(es, "blog", "comment", id);
-    let model = { _parent: some(post_id) with model };
+    model._parent = some(post_id);
     mk_comment(model)
 }
 
 fn find(es: client, post_id: str, id: str) -> option<comment> {
     model::find(es, "blog", "comment", id).map { |model|
-        mk_comment({ _parent: some(post_id) with model })
+        // Searching doesn't include the parent link, so manually add it
+        // back.
+        model._parent = some(post_id);
+        mk_comment(model)
     }
 }
 
@@ -87,7 +90,8 @@ fn find_by_post(es: client, post_id: str) -> [comment] {
                 }
             );
     }.map { |model|
-        mk_comment({ _parent: some(post_id) with model })
+        model._parent = some(post_id);
+        mk_comment(model)
     }
 }
 

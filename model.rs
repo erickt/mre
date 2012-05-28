@@ -28,9 +28,9 @@ type model = @{
     es: client,
     _index: str,
     _type: str,
-    _id: str,
-    _parent: option<str>,
-    _version: option<uint>,
+    mut _id: str,
+    mut _parent: option<str>,
+    mut _version: option<uint>,
     source: hashmap<str, json>,
 };
 
@@ -39,9 +39,9 @@ fn model(es: client, index: str, typ: str, id: str) -> model {
         es: es,
         _index: index,
         _type: typ,
-        _id: id,
-        _parent: none,
-        _version: none,
+        mut _id: id,
+        mut _parent: none,
+        mut _version: none,
         source: str_hash()
     }
 }
@@ -67,9 +67,9 @@ fn hit_to_model(es: client, hit: hashmap<str, json::json>) -> model {
         es: es,
         _index: index,
         _type: typ,
-        _id: id,
-        _parent: parent,
-        _version: version,
+        mut _id: id,
+        mut _parent: parent,
+        mut _version: version,
         source: source
     }
 }
@@ -222,13 +222,13 @@ impl model for model {
         self.set_float(key, value as float)
     }
 
-    fn index(op_type: elasticsearch::op_type) -> result<(str, uint), error> {
+    fn index(op_type: elasticsearch::op_type) -> result<(), error> {
         let index = self.es.prepare_index(self._index, self._type)
             .set_op_type(op_type)
             .set_source(self.source)
             .set_refresh(true);
 
-        if self._id != "" { index.set_id(self._id); }
+        if self._id != "" { index.set_id(copy self._id); }
         self._parent.iter { |p| index.set_parent(p); }
         self._version.iter { |v| index.set_version(v); }
 
@@ -243,7 +243,11 @@ impl model for model {
               json::num(version) { version as uint }
             };
 
-            ok((id, version))
+            // Update our id and version.
+            self._id = id;
+            self._version = some(version);
+
+            ok(())
 
         } else {
             let body = alt check rep.body { json::dict(body) { body } };
@@ -252,17 +256,17 @@ impl model for model {
         }
     }
 
-    fn create() -> result<(str, uint), error> {
+    fn create() -> result<(), error> {
         self.index(elasticsearch::CREATE)
     }
 
-    fn save() -> result<(str, uint), error> {
+    fn save() -> result<(), error> {
         self.index(elasticsearch::INDEX)
     }
 
     fn delete() {
         if self._id != "" {
-            self.es.prepare_delete(self._index, self._type, self._id)
+            self.es.prepare_delete(self._index, self._type, copy self._id)
                 .set_refresh(true)
                 .execute();
         }
