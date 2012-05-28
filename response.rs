@@ -19,6 +19,65 @@ fn response(m2: mongrel2::connection, req: @mongrel2::request) -> @response {
     }
 }
 
+fn code_to_status(code: uint) -> str {
+    // Inspired by Node's http library:
+    alt code {
+      100u { "Continue" }
+      101u { "Switching Protocols" }
+      102u { "Processing" }              // RFC 2518, obsoleted by RFC 4918
+      200u { "OK" }
+      201u { "Created" }
+      202u { "Accepted" }
+      203u { "Non-Authoritative Information" }
+      204u { "No Content" }
+      205u { "Reset Content" }
+      206u { "Partial Content" }
+      207u { "Multi-Status" }            // RFC 4918
+      300u { "Multiple Choices" }
+      301u { "Moved Permanently" }
+      302u { "Moved Temporarily" }
+      303u { "See Other" }
+      304u { "Not Modified" }
+      305u { "Use Proxy" }
+      307u { "Temporary Redirect" }
+      400u { "Bad Request" }
+      401u { "Unauthorized" }
+      402u { "Payment Required" }
+      403u { "Forbidden" }
+      404u { "Not Found" }
+      405u { "Method Not Allowed" }
+      406u { "Not Acceptable" }
+      407u { "Proxy Authentication Required" }
+      408u { "Request Time-out" }
+      409u { "Conflict" }
+      410u { "Gone" }
+      411u { "Length Required" }
+      412u { "Precondition Failed" }
+      413u { "Request Entity Too Large" }
+      414u { "Request-URI Too Large" }
+      415u { "Unsupported Media Type" }
+      416u { "Requested Range Not Satisfiable" }
+      417u { "Expectation Failed" }
+      418u { "I'm a teapot" }            // RFC 2324
+      422u { "Unprocessable Entity" }    // RFC 4918
+      423u { "Locked" }                  // RFC 4918
+      424u { "Failed Dependency" }       // RFC 4918
+      425u { "Unordered Collection" }    // RFC 4918
+      426u { "Upgrade Required" }        // RFC 2817
+      500u { "Internal Server Error" }
+      501u { "Not Implemented" }
+      502u { "Bad Gateway" }
+      503u { "Service Unavailable" }
+      504u { "Gateway Time-out" }
+      505u { "HTTP Version not supported" }
+      506u { "Variant Also Negotiates" } // RFC 2295
+      507u { "Insufficient Storage" }    // RFC 4918
+      509u { "Bandwidth Limit Exceeded" }
+      510u { "Not Extended" }            // RFC 2774
+      _ { "unknown" }
+    }
+}
+
 impl response for @response {
     fn set_status(code: uint, status: str) {
         self.code = code;
@@ -87,177 +146,23 @@ impl response for @response {
         self.reply(rep);
     }
 
-    fn reply_http<T: to_bytes>(code: uint, status: str, body: T) {
+    fn reply_http<T: to_bytes>(code: uint, body: T) {
         let body = body.to_bytes();
-        self.set_status(code, status);
+        self.set_status(code, code_to_status(code));
         self.set_len(body.len());
         self.reply_head();
         self.reply(body);
         self.end();
     }
 
-    fn redirect(location: str) {
+    }
+
+    }
+
+    }
+
+    fn reply_redirect(location: str) {
         self.set_header("Location", location);
-        self.reply_http(302u, "Found", "")
-    }
-
-    fn http_100<T: to_bytes>(body: T) {
-        self.reply_http(100u, "Continue", body)
-    }
-
-    fn http_101<T: to_bytes>(body: T) {
-        self.reply_http(101u, "Switching Protocols", body)
-    }
-
-    fn http_200<T: to_bytes>(body: T) {
-        self.reply_http(200u, "OK", body)
-    }
-
-    fn http_201<T: to_bytes>(body: T) {
-        self.reply_http(201u, "Created", body)
-    }
-
-    fn http_202<T: to_bytes>(body: T) {
-        self.reply_http(202u, "Accepted", body)
-    }
-
-    fn http_203<T: to_bytes>(body: T) {
-        self.reply_http(203u, "Non-Authoritative Information", body)
-    }
-
-    fn http_204<T: to_bytes>(body: T) {
-        self.reply_http(204u, "No Content", body)
-    }
-
-    fn http_205<T: to_bytes>(body: T) {
-        self.reply_http(205u, "Reset Content", body)
-    }
-
-    fn http_206<T: to_bytes>(body: T) {
-        self.reply_http(206u, "Partial Content", body)
-    }
-
-    fn http_300<T: to_bytes>(body: T) {
-        self.reply_http(300u, "Multiple Choices", body)
-    }
-
-    fn http_301<T: to_bytes>(body: T) {
-        self.reply_http(301u, "Moved Permanently", body)
-    }
-
-    fn http_302<T: to_bytes>(body: T) {
-        self.reply_http(302u, "Found", body)
-    }
-
-    fn http_303<T: to_bytes>(body: T) {
-        self.reply_http(303u, "See Other", body)
-    }
-
-    fn http_304<T: to_bytes>(body: T) {
-        self.reply_http(304u, "Not Modified", body)
-    }
-
-    fn http_305<T: to_bytes>(body: T) {
-        self.reply_http(305u, "Use Proxy", body)
-    }
-
-    fn http_307<T: to_bytes>(body: T) {
-        self.reply_http(305u, "Temporary Redirect", body)
-    }
-
-    fn http_400<T: to_bytes>(body: T) {
-        self.reply_http(400u, "Bad Request", body)
-    }
-
-    fn http_401<T: to_bytes>(body: T) {
-        self.reply_http(401u, "Unauthorized", body)
-    }
-
-    fn http_402<T: to_bytes>(body: T) {
-        self.reply_http(402u, "Payment Required", body)
-    }
-
-    fn http_403<T: to_bytes>(body: T) {
-        self.reply_http(403u, "Forbidden", body)
-    }
-
-    fn http_404<T: to_bytes>(body: T) {
-        self.reply_http(404u, "Not Found", body)
-    }
-
-    fn http_405<T: to_bytes>(body: T) {
-        self.reply_http(405u, "Method Not Allowed", body)
-    }
-
-    fn http_406<T: to_bytes>(body: T) {
-        self.reply_http(406u, "Not Acceptable", body)
-    }
-
-    fn http_407<T: to_bytes>(body: T) {
-        self.reply_http(407u, "Proxy Authentication Required", body)
-    }
-
-    fn http_408<T: to_bytes>(body: T) {
-        self.reply_http(408u, "Request Timeout", body)
-    }
-
-    fn http_409<T: to_bytes>(body: T) {
-        self.reply_http(409u, "Conflict", body)
-    }
-
-    fn http_410<T: to_bytes>(body: T) {
-        self.reply_http(410u, "Gone", body)
-    }
-
-    fn http_411<T: to_bytes>(body: T) {
-        self.reply_http(411u, "Length Required", body)
-    }
-
-    fn http_412<T: to_bytes>(body: T) {
-        self.reply_http(412u, "Precondition Failed", body)
-    }
-
-    fn http_413<T: to_bytes>(body: T) {
-        self.reply_http(413u, "Request Entity Too Large", body)
-    }
-
-    fn http_414<T: to_bytes>(body: T) {
-        self.reply_http(414u, "Request-URI Too Long", body)
-    }
-
-    fn http_415<T: to_bytes>(body: T) {
-        self.reply_http(415u, "Unsupported Media Type", body)
-    }
-
-    fn http_416<T: to_bytes>(body: T) {
-        self.reply_http(416u, "Requested Range Not Satisifiable", body)
-    }
-
-    fn http_417<T: to_bytes>(body: T) {
-        self.reply_http(417u, "Expectation Failed", body)
-    }
-
-    fn http_500<T: to_bytes>(body: T) {
-        self.reply_http(500u, "Internal Server Error", body)
-    }
-
-    fn http_501<T: to_bytes>(body: T) {
-        self.reply_http(501u, "Not Implemented", body)
-    }
-
-    fn http_502<T: to_bytes>(body: T) {
-        self.reply_http(502u, "Bad Gateway", body)
-    }
-
-    fn http_503<T: to_bytes>(body: T) {
-        self.reply_http(503u, "Service Unavailable", body)
-    }
-
-    fn http_504<T: to_bytes>(body: T) {
-        self.reply_http(504u, "Gateway Timeout", body)
-    }
-
-    fn http_505<T: to_bytes>(body: T) {
-        self.reply_http(505u, "HTTP Version Not Supported", body)
+        self.reply_http(302u, "")
     }
 }

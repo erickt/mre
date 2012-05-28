@@ -56,11 +56,11 @@ mod tests {
         router.find(GET, "") == none;
         router.find(GET, "/foo/bar/baz") == none;
 
-        let a = { |_req, rep: @response, _m| rep.http_200("") };
-        let b = { |_req, rep: @response, _m| rep.http_200("") };
-        let c = { |_req, rep: @response, _m| rep.http_200("") };
-        let d = { |_req, rep: @response, _m| rep.http_200("") };
-        let z = { |_req, rep: @response, _m| rep.http_200("") };
+        let a = { |_req, rep: @response, _m| rep.reply_http(200u, "") };
+        let b = { |_req, rep: @response, _m| rep.reply_http(200u, "") };
+        let c = { |_req, rep: @response, _m| rep.reply_http(200u, "") };
+        let d = { |_req, rep: @response, _m| rep.reply_http(200u, "") };
+        let z = { |_req, rep: @response, _m| rep.reply_http(200u, "") };
 
         router.add_patterns([
             (GET, "^/$", a),

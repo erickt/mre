@@ -50,7 +50,7 @@ impl render_200 for @response {
         };
 
         let template = mu.render_file(path, data);
-        self.http_200(template)
+        self.reply_http(200u, template)
     }
 }
 
@@ -90,8 +90,8 @@ fn routes(app: app::app) {
                                   username, password);
 
             alt user.create() {
-              ok((id, _)) { rep.redirect("/") }
-              err(e) { rep.http_400(str::bytes(e)) }
+              ok((id, _)) { rep.reply_redirect("/") }
+              err(e) { rep.reply_http(400u, e) }
             }
         }
     }
@@ -106,7 +106,7 @@ fn routes(app: app::app) {
         forms::login(req, rep) { |username, password|
             import user::user;
             alt login(app, username, password) {
-              none { rep.http_401("") }
+              none { rep.reply_http(401u, "") }
               some(user) {
                 // Destroy any old sessions.
                 alt req.data.session {
@@ -124,10 +124,10 @@ fn routes(app: app::app) {
                   ok((id, _version)) {
                     let cookie = cookie::cookie("session", id);
                     rep.set_cookie(cookie);
-                    rep.redirect("/")
+                    rep.reply_redirect("/")
                   }
                   err(e) {
-                    rep.http_500(str::bytes(e))
+                    rep.reply_http(500u, e)
                   }
                 }
               }
@@ -145,7 +145,7 @@ fn routes(app: app::app) {
           }
         }
 
-        rep.redirect("/")
+        rep.reply_redirect("/")
     }
 
     // Show all the users.
@@ -165,7 +165,7 @@ fn routes(app: app::app) {
         let id = m.named("id");
 
         alt user::find(app.es, "blog", id) {
-          none { rep.http_404("") }
+          none { rep.reply_http(404u, "") }
           some(user) {
             rep.render_200(app.mu, "user_show", hash_from_strs([
                 ("user", user)
@@ -179,11 +179,11 @@ fn routes(app: app::app) {
         let id = m.named("id");
 
         alt user::find(app.es, "blog", id) {
-          none { rep.http_404("") }
+          none { rep.reply_http(404u, "") }
           some(user) {
             user.delete();
 
-            rep.redirect("/")
+            rep.reply_redirect("/")
           }
         }
     }
@@ -201,8 +201,8 @@ fn routes(app: app::app) {
             post.set_body(body);
 
             alt post.save() {
-              ok((id, _version)) { rep.redirect("/posts/" + id) }
-              err(e) { rep.http_500(str::bytes(e)) }
+              ok((id, _version)) { rep.reply_redirect("/posts/" + id) }
+              err(e) { rep.reply_http(500u, e) }
             }
         }
     }
@@ -212,7 +212,7 @@ fn routes(app: app::app) {
         let id = m.named("id");
 
         alt post::find(app.es, id) {
-          none { rep.http_404("") }
+          none { rep.reply_http(404u, "") }
           some(post) {
             let comments = post.find_comments();
 
@@ -230,7 +230,7 @@ fn routes(app: app::app) {
         let id = m.named("id");
 
         alt post::find(app.es, id) {
-          none { rep.http_404("") }
+          none { rep.reply_http(404u, "") }
           some(post) {
             rep.render_200(app.mu, "post_edit", hash_from_strs([
                 ("post_id", id.to_mustache()),
@@ -244,15 +244,15 @@ fn routes(app: app::app) {
         let post_id = m.named("id");
 
         alt post::find(app.es, post_id) {
-          none { rep.http_404("") }
+          none { rep.reply_http(404u, "") }
           some(post) {
             forms::post(req, rep) { |title, body|
                 post.set_title(title);
                 post.set_body(body);
 
                 alt post.save() {
-                  ok(id) { rep.redirect("/posts/" + post_id) }
-                  err(e) { rep.http_500(str::bytes(e)) }
+                  ok(id) { rep.reply_redirect("/posts/" + post_id) }
+                  err(e) { rep.reply_http(500u, e) }
                 }
             }
           }
@@ -262,11 +262,11 @@ fn routes(app: app::app) {
     // Delete a post.
     app.post("^/posts/(?<id>[-_A-Za-z0-9]+)/delete$") { |_req, rep, m|
         alt post::find(app.es, m.named("id")) {
-          none { rep.http_404("") }
+          none { rep.reply_http(404u, "") }
           some(post) {
             post.delete();
 
-            rep.redirect("/")
+            rep.reply_redirect("/")
           }
         }
     }
@@ -276,15 +276,15 @@ fn routes(app: app::app) {
         let id = m.named("id");
 
         alt post::find(app.es, id) {
-          none { rep.http_404("") }
+          none { rep.reply_http(404u, "") }
           some(post) {
             forms::comment(req, rep) { |body|
                 let comment = comment::comment(app.es, id, "");
                 comment.set_body(body);
 
                 alt comment.save() {
-                  ok(_) { rep.redirect("/posts/" + id) }
-                  err(e){ rep.http_500(str::bytes(e)) }
+                  ok(_) { rep.reply_redirect("/posts/" + id) }
+                  err(e){ rep.reply_http(500u, e) }
                 }
             }
           }
@@ -297,7 +297,7 @@ fn routes(app: app::app) {
         let comment_id = m.named("id");
 
         alt comment::find(app.es, post_id, comment_id) {
-          none { rep.http_404("") }
+          none { rep.reply_http(404u, "") }
           some(comment) {
             rep.render_200(app.mu, "comment_edit", hash_from_strs([
                 ("post_id", post_id.to_mustache()),
@@ -312,14 +312,14 @@ fn routes(app: app::app) {
         let comment_id = m.named("id");
 
         alt comment::find(app.es, post_id, comment_id) {
-          none { rep.http_404("") }
+          none { rep.reply_http(404u, "") }
           some(comment) {
             forms::comment(req, rep) { |body|
                 comment.set_body(body);
 
                 alt comment.save() {
-                  ok(id) { rep.redirect("/posts/" + post_id) }
-                  err(e) { rep.http_500(str::bytes(e)) }
+                  ok(id) { rep.reply_redirect("/posts/" + post_id) }
+                  err(e) { rep.reply_http(500u, e) }
                 }
             }
           }
@@ -332,11 +332,11 @@ fn routes(app: app::app) {
         let comment_id = m.named("id");
 
         alt comment::find(app.es, post_id, comment_id) {
-          none { rep.http_404("") }
+          none { rep.reply_http(404u, "") }
           some(comment) {
             comment.delete();
 
-            rep.redirect("/posts/" + post_id)
+            rep.reply_redirect("/posts/" + post_id)
           }
         }
     }

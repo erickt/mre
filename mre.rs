@@ -52,7 +52,7 @@ impl mre<T: copy> for mre<T> {
             self.middleware.wrap(req, rep);
 
             alt self.router.find(req.method, req.path()) {
-              none { rep.http_404("") }
+              none { rep.reply_http(404u, "") }
               some((handler, m)) { handler(req, rep, m) }
             };
         }

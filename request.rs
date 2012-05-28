@@ -34,7 +34,7 @@ fn request<T: copy>(req: @mongrel2::request, rep: @response, data: T)
   -> option<@request<T>> {
     let method = alt req.headers.find("METHOD") {
       none {
-        rep.http_400("");
+        rep.reply_http(400u, "");
         ret none
       }
       some(methods) {
@@ -49,7 +49,7 @@ fn request<T: copy>(req: @mongrel2::request, rep: @response, data: T)
           "CONNECT" { CONNECT }
           "PATCH" { PATCH }
           _ {
-            rep.http_501("");
+            rep.reply_http(501u, "");
             ret none
           }
         }
@@ -62,7 +62,7 @@ fn request<T: copy>(req: @mongrel2::request, rep: @response, data: T)
         alt cookie::parse_headers(cookies) {
           ok(cookies) { cookies }
           err(e) {
-            rep.http_400(e);
+            rep.reply_http(400u, e);
             ret none
           }
         }
