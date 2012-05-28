@@ -1,5 +1,6 @@
 import std::time;
 import std::time::tm;
+import m2_request = mongrel2::request;
 
 import router::router;
 import request::request;
@@ -29,10 +30,14 @@ fn mre<T: copy>(m2: mongrel2::connection,
 impl mre<T: copy> for mre<T> {
     fn run() {
         loop {
-            let req = self.m2.recv();
-            let rep = response::response(self.m2, req);
+            let m2_req = self.m2.recv();
 
-            let req = alt request::request(req, self.mk_data()) {
+            // Ignore close requests for now.
+            if m2_req.is_disconnect() { cont; }
+
+            let rep = response::response(self.m2, m2_req);
+
+            let req = alt request::request(m2_req, self.mk_data()) {
               ok(req) { req }
               err(e) {
                 // Ignore this request if it's malformed.
@@ -42,9 +47,6 @@ impl mre<T: copy> for mre<T> {
             };
 
             self.middleware.wrap(req, rep);
-
-            // Ignore close requests for now.
-            if req.is_disconnect() { cont; }
 
             alt req.find_header("METHOD") {
               none {
