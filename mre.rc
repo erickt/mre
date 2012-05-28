@@ -28,4 +28,4 @@ import result::{result, ok, err};
 
 import std::map::{hashmap, str_hash};
 import std::json;
-import std::json::json;
+import std::json::{json, to_json};

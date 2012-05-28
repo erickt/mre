@@ -128,6 +128,10 @@ impl response for @response {
         self.set_header("Content-Length", uint::to_str(len, 10u));
     }
 
+    fn set_content_type(content_type: str) {
+        self.set_header("Content-Type", content_type)
+    }
+
     fn reply_head() {
         let mut rep = [];
         rep += str::bytes(#fmt("HTTP/1.1 %u ", self.code));
@@ -155,10 +159,19 @@ impl response for @response {
         self.end();
     }
 
+    fn reply_text<T: to_bytes>(code: uint, body: T) {
+        self.set_content_type("text/plain");
+        self.reply_http(code, body)
     }
 
+    fn reply_html<T: to_bytes>(code: uint, body: T) {
+        self.set_content_type("application/html");
+        self.reply_http(code, body)
     }
 
+    fn reply_json<T: to_json>(code: uint, body: T) {
+        self.set_content_type("application/json");
+        self.reply_http(code, json::to_str(body.to_json()))
     }
 
     fn reply_redirect(location: str) {
