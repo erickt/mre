@@ -1,6 +1,6 @@
 import std::json::json;
 import elasticsearch::client;
-import model::model;
+import model::{model, error};
 import auth::hasher;
 
 export user;
@@ -14,8 +14,8 @@ iface user {
     fn set_password(hasher: hasher, password: str) -> bool;
     fn verify_password(hasher: hasher, password: str) -> bool;
 
-    fn create() -> result<(str, uint), str>;
-    fn save() -> result<(str, uint), str>;
+    fn create() -> result<(str, uint), error>;
+    fn save() -> result<(str, uint), error>;
 
     fn delete();
 }
@@ -39,12 +39,12 @@ fn mk_user(model: model) -> user {
             hasher.verify(password, self.password())
         }
 
-        fn create() -> result<(str, uint), str> {
+        fn create() -> result<(str, uint), error> {
             import model::model;
             self.create()
         }
 
-        fn save() -> result<(str, uint), str> {
+        fn save() -> result<(str, uint), error> {
             import model::model;
             self.save()
         }

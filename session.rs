@@ -1,6 +1,6 @@
 import base64::to_base64;
 import elasticsearch::client;
-import model::model;
+import model::{model, error};
 
 iface session {
     fn id() -> str;
@@ -8,7 +8,8 @@ iface session {
     fn user_id() -> str;
     fn set_user_id(user_id: str) -> bool;
 
-    fn create() -> result<(str, uint), str>;
+    fn create() -> result<(str, uint), error>;
+    fn save() -> result<(str, uint), error>;
 
     fn delete();
 }
@@ -22,12 +23,12 @@ fn mk_session(model: model) -> session {
             self.set_str("user_id", user_id)
         }
 
-        fn create() -> result<(str, uint), str> {
+        fn create() -> result<(str, uint), error> {
             import model::model;
             self.create()
         }
 
-        fn save() -> result<(str, uint), str> {
+        fn save() -> result<(str, uint), error> {
             import model::model;
             self.save()
         }

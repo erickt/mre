@@ -6,10 +6,23 @@ import elasticsearch::{
     delete_builder
 };
 
+export error;
+export to_bytes;
 export model;
 export find;
 export search;
 export all;
+
+type error = {
+    code: uint,
+    msg: str
+};
+
+impl of to_bytes for error {
+    fn to_bytes() -> [u8] {
+        (#fmt("[%u] %s", self.code, self.msg)).to_bytes()
+    }
+}
 
 type model = @{
     es: client,
@@ -209,7 +222,7 @@ impl model for model {
         self.set_float(key, value as float)
     }
 
-    fn index(op_type: elasticsearch::op_type) -> result<(str, uint), str> {
+    fn index(op_type: elasticsearch::op_type) -> result<(str, uint), error> {
         let index = self.es.prepare_index(self._index, self._type)
             .set_op_type(op_type)
             .set_source(self.source)
@@ -235,15 +248,15 @@ impl model for model {
         } else {
             let body = alt check rep.body { json::dict(body) { body } };
             let e = alt check body.get("error") { json::string(e) { e } };
-            err(e)
+            err({ code: rep.code, msg: e })
         }
     }
 
-    fn create() -> result<(str, uint), str> {
+    fn create() -> result<(str, uint), error> {
         self.index(elasticsearch::CREATE)
     }
 
-    fn save() -> result<(str, uint), str> {
+    fn save() -> result<(str, uint), error> {
         self.index(elasticsearch::INDEX)
     }
 

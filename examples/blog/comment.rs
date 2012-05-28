@@ -1,5 +1,5 @@
 import elasticsearch::{client, delete_by_query_builder};
-import mre::model::model;
+import mre::model::{model, error};
 
 export comment;
 export find;
@@ -15,8 +15,8 @@ iface comment {
     fn body() -> str;
     fn set_body(body: str) -> bool;
 
-    fn create() -> result<(str, uint), str>;
-    fn save() -> result<(str, uint), str>;
+    fn create() -> result<(str, uint), error>;
+    fn save() -> result<(str, uint), error>;
 
     fn delete();
 }
@@ -43,12 +43,12 @@ fn mk_comment(model: model) -> comment {
             self.set_str("body", body)
         }
 
-        fn create() -> result<(str, uint), str> {
+        fn create() -> result<(str, uint), error> {
             import model::model;
             self.create()
         }
 
-        fn save() -> result<(str, uint), str> {
+        fn save() -> result<(str, uint), error> {
             import model::model;
             self.save()
         }

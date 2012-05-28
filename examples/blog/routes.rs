@@ -1,4 +1,5 @@
 import mustache::context;
+import mre::model::to_bytes;
 
 // FIXME: move after https://github.com/mozilla/rust/issues/2242 is fixed.
 impl <T: to_mustache> of to_mustache for option<T> {
