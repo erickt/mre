@@ -165,7 +165,7 @@ impl response for @response {
     }
 
     fn reply_html<T: to_bytes>(code: uint, body: T) {
-        self.set_content_type("application/html");
+        self.set_content_type("text/html");
         self.reply_http(code, body)
     }
 
