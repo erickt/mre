@@ -7,7 +7,7 @@ import elasticsearch::{
 };
 
 export error;
-export to_bytes;
+export to_str, to_bytes;
 export model;
 export find;
 export search;
@@ -18,10 +18,12 @@ type error = {
     msg: str
 };
 
+impl of to_str::to_str for error {
+    fn to_str() -> str { #fmt("[%u] %s", self.code, self.msg) }
+}
+
 impl of to_bytes for error {
-    fn to_bytes() -> [u8] {
-        (#fmt("[%u] %s", self.code, self.msg)).to_bytes()
-    }
+    fn to_bytes() -> [u8] { self.to_str().to_bytes() }
 }
 
 type model = @{
