@@ -30,8 +30,8 @@ fn mre<T: copy>(m2: mongrel2::connection,
 impl mre<T: copy> for mre<T> {
     fn run() {
         io::println(#fmt("Starting up %? -> %?",
-            self.m2.sub_addrs(),
-            self.m2.pub_addrs()));
+            self.m2.req_addrs(),
+            self.m2.rep_addrs()));
 
         loop {
             let m2_req = self.m2.recv();
