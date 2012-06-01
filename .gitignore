@@ -2,4 +2,3 @@
 libmre*.dylib
 *.dSYM/
 mre
-test
