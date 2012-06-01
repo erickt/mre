@@ -18,11 +18,10 @@ type app = @{
 };
 
 fn app() -> app {
-    let zmq =
-        alt zmq::init(1) {
-          ok(ctx) { ctx }
-          err(e) { fail e.to_str() }
-        };
+    let zmq = alt zmq::init(1) {
+      ok(ctx) { ctx }
+      err(e) { fail e.to_str() }
+    };
 
     let m2 = mongrel2::connect(zmq,
         "F0D32575-2ABB-4957-BC8B-12DAC8AFF13A",
@@ -43,7 +42,7 @@ fn app() -> app {
         }
     ]);
 
-    let mre = mre::mre(m2, middleware) { ||
+    let mre = mre::mre_builder(zmq, m2, middleware) { ||
         { mut session: none, mut user: none }
     };
 
