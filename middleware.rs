@@ -1,23 +1,15 @@
 import request::request;
 import response::response;
 
-type wrapper<T> = fn@(@request<T>, @response);
+type middleware<T> = fn@(@request<T>, @response);
 
-type middleware<T> = {
-    wrappers: [wrapper<T>],
-};
-
-fn middleware<T>(wrappers: [wrapper<T>]) -> middleware<T> {
-    { wrappers: wrappers }
-}
-
-impl middleware<T> for middleware<T> {
+impl middleware<T> for [middleware<T>] {
     fn wrap(req: @request<T>, rep: @response) {
-        self.wrappers.iter { |wrapper| wrapper(req, rep); }
+        self.iter { |middleware| middleware(req, rep); }
     }
 }
 
-fn logger<T: copy>(logger: io::writer) -> wrapper<T> {
+fn logger<T: copy>(logger: io::writer) -> middleware<T> {
     { |req: @request<T>, rep: @response|
         let old_end = rep.end;
         rep.end = { ||
@@ -55,7 +47,7 @@ fn session<T>(es: elasticsearch::client,
               user_index: str,
               cookie_name: str,
               f: fn@(@request<T>, session::session, user::user))
-  -> wrapper<T> {
+  -> middleware<T> {
     { |req: @request<T>, rep: @response|
         req.cookies.find(cookie_name).iter { |cookie|
             alt session::find(es, session_index, cookie.value) {

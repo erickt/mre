@@ -10,7 +10,6 @@ type data = {
 
 type app = @{
     zmq: zmq::context,
-    m2: mongrel2::connection,
     mre: mre::mre<data>,
     es: elasticsearch::client,
     mu: mustache::context,
@@ -23,14 +22,12 @@ fn app() -> app {
       err(e) { fail e.to_str() }
     };
 
-    let m2 = mongrel2::connect(zmq,
-        "F0D32575-2ABB-4957-BC8B-12DAC8AFF13A",
-        ["tcp://127.0.0.1:9998"],
-        ["tcp://127.0.0.1:9999"]);
-
+    // Connect to Elasticsearch, which we'll use as our database.
     let es = elasticsearch::connect_with_zmq(zmq, "tcp://localhost:9700");
 
-    let middleware = mre::middleware::middleware([
+    // Create our middleware. We'll use the session middleware so we can
+    // automatically log a user in based off a session cookie.
+    let middleware = [
         mre::middleware::logger(io::stdout()),
         mre::middleware::session(es,
             "blog",
@@ -40,32 +37,37 @@ fn app() -> app {
             req.data.session = some(session);
             req.data.user = some(user);
         }
-    ]);
+    ];
 
-    let mre = mre::mre_builder(zmq, m2, middleware) { ||
-        { mut session: none, mut user: none }
-    };
-
-
-    let mu = mustache::context("views", ".mustache");
+    // 
+    let mre = mre::mre(zmq,
+        "F0D32575-2ABB-4957-BC8B-12DAC8AFF13A",
+        ["tcp://127.0.0.1:9998"],
+        ["tcp://127.0.0.1:9999"],
+        middleware,
+        { || { mut session: none, mut user: none } });
 
     @{
         zmq: zmq,
-        m2: m2,
         mre: mre,
         es: es,
-        mu: mu,
+
+        // We store our mustache views in a subdirectory, so we need to
+        // make our own context to tell mustache where to look.
+        mu: mustache::context("views", ".mustache"),
+
+        // Create a password hasher that uses the pbkdf2 algorithm.
         password_hasher: mre::auth::default_pbkdf2_sha1()
     }
 }
 
 impl app for app {
     fn get(regex: str, f: mre::router::handler<data>) {
-        self.mre.router.add(mre::request::GET, regex, f)
+        self.mre.get(regex, f)
     }
 
     fn post(regex: str, f: mre::router::handler<data>) {
-        self.mre.router.add(mre::request::POST, regex, f)
+        self.mre.post(regex, f)
     }
 
     fn run() {
@@ -73,7 +75,7 @@ impl app for app {
     }
 
     fn term() {
-        self.m2.term();
+        self.mre.m2.term();
         self.zmq.term();
     }
 }

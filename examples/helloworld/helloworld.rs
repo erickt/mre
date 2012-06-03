@@ -1,5 +1,22 @@
+use std;
+use zmq;
+use mre;
+
+// Import some common things into the global namespace.
+import result::{result, ok, err};
+import zmq::error;
+import mre::mre;
+import mre::response::response;
+import mre::to_bytes::to_bytes;
+
 fn main() {
     let mre = mre::mre(
+        // Create a zeromq context that MRE will use to talk to Mongrel2.
+        alt zmq::init(1) {
+          ok(ctx) { ctx }
+          err(e) { fail e.to_str() }
+        },
+
         // A UUID for this Mongrel2 backend.
         "E4B7CE14-E7F7-43EE-A3E6-DB7B0A0C106F",
 
@@ -21,7 +38,7 @@ fn main() {
     );
 
     // Route our responses.
-    mre.router.add(GET, "^/$") { |_req, rep, _m|
+    mre.get("^/$") { |_req, rep, _m|
         rep.reply_html(200u, "
             <html>
             <body>
@@ -30,5 +47,6 @@ fn main() {
             </html>")
     }
 
+    // Finally, start the MRE event loop.
     mre.run();
 }

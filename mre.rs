@@ -10,54 +10,28 @@ import middleware::middleware;
 
 import to_bytes::to_bytes;
 
-type mre<T> = {
-    zmq: zmq::context,
+type mre<T> = @{
     m2: mongrel2::connection,
     router: router::router<T>,
-    middleware: middleware::middleware<T>,
-    mk_data: fn@() -> T,
+    middleware: [middleware<T>],
+    data: fn@() -> T,
 };
-
-fn mre_builder<T: copy>(zmq: zmq::context,
-                        m2: mongrel2::connection,
-                        middleware: middleware::middleware<T>,
-                        mk_data: fn@() -> T) -> mre<T> {
-    {
-        zmq: zmq,
-        m2: m2,
-        router: router::router(),
-        middleware: middleware,
-        mk_data: mk_data,
-    }
-}
 
 #[doc = "
 Helper function to abstract away some of the boilerplate code.
 "]
-fn mre<T: copy>(sender_id: str,
+fn mre<T: copy>(zmq: zmq::context,
+                sender_id: str,
                 req_addrs: [str],
                 rep_addrs: [str],
-                middleware: [middleware::wrapper<T>],
-                mk_data: fn@() -> T) -> mre<T> {
-    // First write some boilerplate code to create an MRE instance. This
-    // code really should be abstracted away.
-    let zmq = alt zmq::init(1) {
-      ok(ctx) { ctx }
-      err(e) { fail e.to_str() }
-    };
-
-    let m2 = mongrel2::connect(zmq, sender_id, req_addrs, rep_addrs);
-
-    // Create our middleware, which preproceses requests and responses.
-    // For now we'll just use the logger.
-    let mw = middleware::middleware(middleware);
-
-    // Create our MRE instance. Our middleware may needs to store
-    // middleware somewhere, so we need to pass in a function that creates
-    // a fresh per-request data. However, since the logger middleware
-    // doesn't actually need to store anything, we'll just return a unit
-    // value.
-    mre_builder(zmq, m2, mw, mk_data)
+                middleware: [middleware<T>],
+                data: fn@() -> T) -> mre<T> {  
+    @{
+        m2: mongrel2::connect(zmq, sender_id, req_addrs, rep_addrs),
+        router: router::router(),
+        middleware: middleware,
+        data: data
+    }
 }
 
 impl mre<T: copy> for mre<T> {
@@ -74,7 +48,7 @@ impl mre<T: copy> for mre<T> {
 
             let rep = response::response(self.m2, m2_req);
 
-            let req = alt request::request(m2_req, rep, self.mk_data()) {
+            let req = alt request::request(m2_req, rep, self.data()) {
               none {
                 // Ignore this request if it's malformed.
                 cont;
@@ -89,5 +63,41 @@ impl mre<T: copy> for mre<T> {
               some((handler, m)) { handler(req, rep, m) }
             };
         }
+    }
+
+    fn head(regex: str, f: router::handler<T>) {
+        self.router.add(request::HEAD, regex, f)
+    }
+
+    fn get(regex: str, f: router::handler<T>) {
+        self.router.add(request::GET, regex, f)
+    }
+
+    fn post(regex: str, f: router::handler<T>) {
+        self.router.add(request::POST, regex, f)
+    }
+
+    fn put(regex: str, f: router::handler<T>) {
+        self.router.add(request::PUT, regex, f)
+    }
+
+    fn delete(regex: str, f: router::handler<T>) {
+        self.router.add(request::DELETE, regex, f)
+    }
+
+    fn trace(regex: str, f: router::handler<T>) {
+        self.router.add(request::TRACE, regex, f)
+    }
+
+    fn options(regex: str, f: router::handler<T>) {
+        self.router.add(request::OPTIONS, regex, f)
+    }
+
+    fn connect(regex: str, f: router::handler<T>) {
+        self.router.add(request::CONNECT, regex, f)
+    }
+
+    fn patch(regex: str, f: router::handler<T>) {
+        self.router.add(request::PATCH, regex, f)
     }
 }
