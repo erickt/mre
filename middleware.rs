@@ -1,11 +1,16 @@
 import request::request;
 import response::response;
 
-type middleware<T> = fn@(@request<T>, @response);
+type middleware<T> = fn@(@request<T>, @response) -> bool;
 
 impl middleware<T> for [middleware<T>] {
-    fn wrap(req: @request<T>, rep: @response) {
-        self.iter { |middleware| middleware(req, rep); }
+    fn wrap(req: @request<T>, rep: @response) -> bool {
+        for self.each { |middleware|
+            // Exit early if the middleware has handled the request.
+            if !middleware(req, rep) { ret false; }
+        }
+
+        true
     }
 }
 
@@ -39,6 +44,8 @@ fn logger<T: copy>(logger: io::writer) -> middleware<T> {
 
             old_end();
         };
+
+        true
     }
 }
 
@@ -68,5 +75,7 @@ fn session<T>(es: elasticsearch::client,
               }
             }
         }
+
+        true
     }
 }

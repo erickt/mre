@@ -56,12 +56,14 @@ impl mre<T: copy> for mre<T> {
               some(req) { req }
             };
 
-            self.middleware.wrap(req, rep);
-
-            alt self.router.find(req.method, req.path()) {
-              none { rep.reply_http(404u, "") }
-              some((handler, m)) { handler(req, rep, m) }
-            };
+            if self.middleware.wrap(req, rep) {
+                // Only run the handler if the middleware hasn't handled
+                // the request.
+                alt self.router.find(req.method, req.path()) {
+                  none { rep.reply_http(404u, "") }
+                  some((handler, m)) { handler(req, rep, m) }
+                };
+            }
         }
     }
 
