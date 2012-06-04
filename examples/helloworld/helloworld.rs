@@ -18,7 +18,7 @@ fn main() {
         },
 
         // A UUID for this Mongrel2 backend.
-        "E4B7CE14-E7F7-43EE-A3E6-DB7B0A0C106F",
+        some("E4B7CE14-E7F7-43EE-A3E6-DB7B0A0C106F"),
 
         // The addresses to receive requests from.
         ["tcp://127.0.0.1:9996"],

@@ -21,7 +21,7 @@ type mre<T> = @{
 Helper function to abstract away some of the boilerplate code.
 "]
 fn mre<T: copy>(zmq: zmq::context,
-                sender_id: str,
+                sender_id: option<str>,
                 req_addrs: [str],
                 rep_addrs: [str],
                 middleware: [middleware<T>],
