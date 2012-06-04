@@ -39,12 +39,12 @@ fn main() {
 
     // Route our responses.
     mre.get("^/$") { |_req, rep, _m|
-        rep.reply_html(200u, "
-            <html>
-            <body>
-            <h1>Hello world!</h1>
-            </body>
-            </html>")
+        rep.reply_html(200u,
+            "<html>\n" +
+            "<body>\n" +
+            "<h1>Hello world!</h1>\n" +
+            "</body>\n" +
+            "</html>")
     }
 
     // Finally, start the MRE event loop.
