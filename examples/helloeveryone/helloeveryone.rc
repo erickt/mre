@@ -1,0 +1,24 @@
+use std;
+use zmq;
+use mre;
+use elasticsearch;
+use mustache;
+use uri;
+
+// Import some common things into the global namespace.
+import result::{result, ok, err};
+import std::map::{hashmap, hash_from_strs};
+
+import mre::mre;
+import mre::request::request;
+import mre::response::response;
+import mre::to_bytes::to_bytes;
+import mre::model;
+import elasticsearch::{
+    client,
+    search_builder,
+    json_dict_builder,
+    json_list_builder};
+import mustache::to_mustache;
+
+mod person;

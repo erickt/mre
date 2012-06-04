@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Hello Everyone!</title>
+</head>
+<body>
+<h1>Hey You!</h1>
+
+<form action="/" method="post">
+	<label>What is your name?</label>
+	<input type="text" name="name" autofocus>
+</form>
+
+<ul>
+{{# names}}
+	<li>Hello {{name}}!</li>
+{{/ names}}
+</ul>
+
+</body>
+</html>
