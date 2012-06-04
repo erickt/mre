@@ -1,14 +1,3 @@
-use std;
-use zmq;
-use mre;
-
-// Import some common things into the global namespace.
-import result::{result, ok, err};
-import zmq::error;
-import mre::mre;
-import mre::response::response;
-import mre::to_bytes::to_bytes;
-
 fn main() {
     let mre = mre::mre(
         // Create a zeromq context that MRE will use to talk to Mongrel2.

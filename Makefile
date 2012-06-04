@@ -5,7 +5,7 @@ test:
 	rustc --test mre.rc
 
 example-helloworld: all
-	rustc -L . examples/helloworld/helloworld.rs
+	rustc -L . examples/helloworld/helloworld.rc
 
 example-blog: all
 	rustc -L . examples/blog/blog.rc
