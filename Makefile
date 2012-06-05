@@ -23,7 +23,7 @@ deps:
 	cargo install -g elasticsearch
 	cargo install -g mustache
 	cargo install -g pcre
-	cargo install -g git://github.com/erickt/rustcrypto.git
+	cargo install -g crypto
 
 clean:
 	rm -rf mre *.so *.dylib *.dSYM
