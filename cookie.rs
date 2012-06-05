@@ -1,7 +1,7 @@
 import std::time;
 import std::time::tm;
 
-type cookie = {
+type cookie = @{
     name: str,
     value: str,
     mut path: option<str>,
@@ -12,7 +12,7 @@ type cookie = {
 };
 
 fn cookie(name: str, value: str) -> cookie {
-    {
+    @{
         name: name,
         value: value,
         mut path: none,

@@ -3,7 +3,7 @@ import mre::router::router;
 import mre::response::response;
 import zmq::context;
 
-type data = {
+type data = @{
     mut session: option<mre::session::session>,
     mut user: option<mre::user::user>,
 };
@@ -45,7 +45,7 @@ fn app() -> app {
         ["tcp://127.0.0.1:9998"],
         ["tcp://127.0.0.1:9999"],
         middleware,
-        { || { mut session: none, mut user: none } });
+        { || @{ mut session: none, mut user: none } });
 
     @{
         zmq: zmq,

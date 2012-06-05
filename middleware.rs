@@ -1,9 +1,9 @@
 import request::request;
 import response::response;
 
-type middleware<T> = fn@(@request<T>, @response) -> bool;
+type middleware<T: copy> = fn@(@request<T>, @response) -> bool;
 
-impl middleware<T> for [middleware<T>] {
+impl middleware<T: copy> for [middleware<T>] {
     fn wrap(req: @request<T>, rep: @response) -> bool {
         for self.each { |middleware|
             // Exit early if the middleware has handled the request.
@@ -49,11 +49,11 @@ fn logger<T: copy>(logger: io::writer) -> middleware<T> {
     }
 }
 
-fn session<T>(es: elasticsearch::client,
-              session_index: str,
-              user_index: str,
-              cookie_name: str,
-              f: fn@(@request<T>, session::session, user::user))
+fn session<T: copy>(es: elasticsearch::client,
+                    session_index: str,
+                    user_index: str,
+                    cookie_name: str,
+                    f: fn@(@request<T>, session::session, user::user))
   -> middleware<T> {
     { |req: @request<T>, rep: @response|
         req.cookies.find(cookie_name).iter { |cookie|

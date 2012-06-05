@@ -10,7 +10,7 @@ import middleware::middleware;
 
 import to_bytes::to_bytes;
 
-type mre<T> = @{
+type mre<T: copy> = @{
     m2: mongrel2::connection,
     router: router::router<T>,
     middleware: [middleware<T>],
