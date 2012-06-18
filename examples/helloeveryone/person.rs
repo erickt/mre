@@ -38,17 +38,14 @@ class _person {
     }
 
     fn create() -> result<(), error> {
-        import model::model;
         self.model.create()
     }
 
     fn save() -> result<(), error> {
-        import model::model;
         self.model.save()
     }
 
     fn delete() {
-        import model::model;
         self.model.delete()
     }
 }
