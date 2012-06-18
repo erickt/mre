@@ -15,11 +15,11 @@ export all;
 
 type error = {
     code: uint,
-    msg: str
+    msg: @str
 };
 
 impl of to_str::to_str for error {
-    fn to_str() -> str { #fmt("[%u] %s", self.code, self.msg) }
+    fn to_str() -> str { #fmt("[%u] %s", self.code, *self.msg) }
 }
 
 impl of to_bytes for error {
@@ -28,15 +28,15 @@ impl of to_bytes for error {
 
 type model = @{
     es: client,
-    _index: str,
-    _type: str,
-    mut _id: str,
-    mut _parent: option<str>,
+    _index: @str,
+    _type: @str,
+    mut _id: @str,
+    mut _parent: option<@str>,
     mut _version: option<uint>,
     source: hashmap<str, json>,
 };
 
-fn model(es: client, index: str, typ: str, id: str) -> model {
+fn model(es: client, index: @str, typ: @str, id: @str) -> model {
     @{
         es: es,
         _index: index,
@@ -76,8 +76,8 @@ fn hit_to_model(es: client, hit: hashmap<str, json::json>) -> model {
     }
 }
 
-fn find(es: client, index: str, typ: str, id: str) -> option<model> {
-    let rep = es.get(index, typ, id);
+fn find(es: client, index: @str, typ: @str, id: @str) -> option<model> {
+    let rep = es.get(*index, copy *typ, copy *id);
 
     // Fail if ES had an error.
     if rep.code != 200u {
@@ -109,7 +109,7 @@ fn search(es: client, f: fn(search_builder)) -> [model] {
           json::dict(hits) {
             alt check hits.get("hits") {
               json::list(hits) {
-                  hits.map { |hit|
+                  (*hits).map { |hit|
                       alt check hit {
                         json::dict(hit) { hit_to_model(es, hit) }
                       }
@@ -122,11 +122,11 @@ fn search(es: client, f: fn(search_builder)) -> [model] {
     }
 }
 
-fn all(es: client, index: str, typ: str) -> [model] {
+fn all(es: client, index: @str, typ: @str) -> [model] {
     search(es) { |bld|
         bld
-            .set_indices([index])
-            .set_types([typ])
+            .set_indices([copy *index])
+            .set_types([copy *typ])
             .set_source(*json_dict_builder()
                 .insert_dict("query") { |bld|
                     bld.insert_dict("match_all") { |_bld| };
@@ -136,18 +136,18 @@ fn all(es: client, index: str, typ: str) -> [model] {
 }
 
 impl model for model {
-    fn set_null(key: str) -> bool {
+    fn set_null(+key: str) -> bool {
         self.source.insert(key, json::null)
     }
 
-    fn get_bool(key: str) -> bool {
+    fn get_bool(+key: str) -> bool {
         alt self.find_bool(key) {
           none { fail }
           some(value) { value }
         }
     }
 
-    fn find_bool(key: str) -> option<bool> {
+    fn find_bool(+key: str) -> option<bool> {
         self.source.find(key).chain { |value|
             alt value {
               json::boolean(value) { some(value) }
@@ -156,11 +156,11 @@ impl model for model {
         }
     }
 
-    fn set_bool(key: str, value: bool) -> bool {
+    fn set_bool(+key: str, value: bool) -> bool {
         self.source.insert(key, json::boolean(value))
     }
 
-    fn find_str(key: str) -> option<str> {
+    fn find_str(+key: str) -> option<@str> {
         self.source.find(key).chain { |value|
             alt value {
               json::string(value) { some(value) }
@@ -169,18 +169,18 @@ impl model for model {
         }
     }
 
-    fn get_str(key: str) -> str {
+    fn get_str(+key: str) -> @str {
         alt self.find_str(key) {
           none { fail }
           some(value) { value }
         }
     }
 
-    fn set_str(key: str, value: str) -> bool {
+    fn set_str(+key: str, value: @str) -> bool {
         self.source.insert(key, json::string(value))
     }
 
-    fn find_float(key: str) -> option<float> {
+    fn find_float(+key: str) -> option<float> {
         self.source.find(key).chain { |value|
             alt value {
               json::num(value) { some(value) }
@@ -189,50 +189,51 @@ impl model for model {
         }
     }
 
-    fn get_float(key: str) -> float {
+    fn get_float(+key: str) -> float {
         alt self.find_float(key) {
           none { fail }
           some(value) { value }
         }
     }
 
-    fn set_float(key: str, value: float) -> bool {
+    fn set_float(+key: str, value: float) -> bool {
         self.source.insert(key, json::num(value))
     }
 
-    fn find_uint(key: str) -> option<uint> {
+    fn find_uint(+key: str) -> option<uint> {
         self.find_float(key).map { |value| value as uint }
     }
 
-    fn get_uint(key: str) -> uint {
+    fn get_uint(+key: str) -> uint {
         self.get_float(key) as uint
     }
 
-    fn set_uint(key: str, value: uint) -> bool {
+    fn set_uint(+key: str, value: uint) -> bool {
         self.set_float(key, value as float)
     }
 
-    fn find_int(key: str) -> option<int> {
+    fn find_int(+key: str) -> option<int> {
         self.find_float(key).map { |value| value as int }
     }
 
-    fn get_int(key: str) -> int {
+    fn get_int(+key: str) -> int {
         self.get_float(key) as int
     }
 
-    fn set_int(key: str, value: int) -> bool {
+    fn set_int(+key: str, value: int) -> bool {
         self.set_float(key, value as float)
     }
 
     fn index(op_type: elasticsearch::op_type) -> result<(), error> {
-        let index = self.es.prepare_index(self._index, self._type)
+        let index = self.es.prepare_index(copy *self._index, copy *self._type)
             .set_op_type(op_type)
             .set_source(self.source)
             .set_refresh(true);
 
-        if self._id != "" { index.set_id(copy self._id); }
-        self._parent.iter { |p| index.set_parent(p); }
-        self._version.iter { |v| index.set_version(v); }
+        if *self._id != "" { index.set_id(copy *self._id); }
+
+        (copy self._parent).iter { |p| index.set_parent(copy *p); }
+        (copy self._version).iter { |v| index.set_version(v); }
 
         let rep = index.execute();
 
@@ -267,8 +268,11 @@ impl model for model {
     }
 
     fn delete() {
-        if self._id != "" {
-            self.es.prepare_delete(self._index, self._type, copy self._id)
+        if *self._id != "" {
+            self.es.prepare_delete(
+                    copy *self._index,
+                    copy *self._type,
+                    copy *self._id)
                 .set_refresh(true)
                 .execute();
         }

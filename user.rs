@@ -8,11 +8,11 @@ export find;
 export all;
 
 iface user {
-    fn id() -> str;
+    fn id() -> @str;
 
-    fn password() -> str;
-    fn set_password(hasher: hasher, password: str) -> bool;
-    fn verify_password(hasher: hasher, password: str) -> bool;
+    fn password() -> @str;
+    fn set_password(hasher: hasher, password: @str) -> bool;
+    fn verify_password(hasher: hasher, password: @str) -> bool;
 
     fn create() -> result<(), error>;
     fn save() -> result<(), error>;
@@ -22,20 +22,18 @@ iface user {
 
 fn mk_user(model: model) -> user {
     impl of user for model {
-        fn id() -> str {
-            self._id
-        }
+        fn id() -> @str { self._id }
 
-        fn password() -> str {
+        fn password() -> @str {
             self.get_str("password")
         }
 
-        fn set_password(hasher: hasher, password: str) -> bool {
+        fn set_password(hasher: hasher, password: @str) -> bool {
             let password = auth::password(hasher, password);
-            self.set_str("password", password)
+            self.set_str("password", @password)
         }
 
-        fn verify_password(hasher: hasher, password: str) -> bool {
+        fn verify_password(hasher: hasher, password: @str) -> bool {
             hasher.verify(password, self.password())
         }
 
@@ -58,19 +56,19 @@ fn mk_user(model: model) -> user {
     model as user
 }
 
-fn user(es: client, hasher: hasher, index: str,
-        username: str, password: str) -> user {
-    let user = mk_user(model(es, index, "user", username));
+fn user(es: client, hasher: hasher, index: @str,
+        username: @str, password: @str) -> user {
+    let user = mk_user(model(es, index, @"user", username));
 
     user.set_password(hasher, password);
 
     user
 }
 
-fn find(es: client, index: str, id: str) -> option<user> {
-    model::find(es, index, "user", id).map { |model| mk_user(model) }
+fn find(es: client, index: @str, id: @str) -> option<user> {
+    model::find(es, index, @"user", id).map { |model| mk_user(model) }
 }
 
-fn all(es: client, index: str) -> [user] {
-    model::all(es, index, "user").map { |model| mk_user(model) }
+fn all(es: client, index: @str) -> [user] {
+    model::all(es, index, @"user").map { |model| mk_user(model) }
 }

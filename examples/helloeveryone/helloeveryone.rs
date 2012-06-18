@@ -1,4 +1,3 @@
-import zmq::error;
 import person::person;
 
 fn main() {
@@ -56,7 +55,7 @@ fn main() {
     // Add a new person to greet.
     mre.post("^/$") { |req, rep, _m|
         // Parse the form data.
-        let form = uri::decode_form_urlencoded(req.body());
+        let form = uri::decode_form_urlencoded(*req.body());
 
         alt form.find("name") {
           none {
@@ -65,7 +64,7 @@ fn main() {
           some(names) {
             // Create and save our person. If successful, redirect back to
             // the front page.
-            let person = person::person(es, names[0]);
+            let person = person::person(es, (*names)[0u]);
 
             alt person.create() {
               ok(()) { rep.reply_redirect("/") }

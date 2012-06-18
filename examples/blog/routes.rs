@@ -55,8 +55,8 @@ impl render_200 for @response {
     }
 }
 
-fn login(app: app, username: str, password: str) -> option<user::user> {
-    user::find(app.es, "blog", username).chain { |user|
+fn login(app: app, username: @str, password: @str) -> option<user::user> {
+    user::find(app.es, @"blog", username).chain { |user|
         if app.password_hasher.verify(password, user.password()) {
             some(user)
         } else {
@@ -72,14 +72,14 @@ fn routes(app: app::app) {
 
         // This can be simplified after mozilla/rust/issues/2258 is fixed.
         rep.render_200(app.mu, "index", hash_from_strs([
-            ("user", req.data.user.to_mustache()),
+            ("user", (copy req.data.user).to_mustache()),
             ("posts", posts.to_mustache())
         ]))
     }
 
     // Create a user.
     app.get("^/signup$") { |_req, rep, _m|
-        let hash: hashmap<str, str> = str_hash();
+        let hash: hashmap<str, @str> = str_hash();
         rep.render_200(app.mu, "signup", hash)
     }
 
@@ -87,7 +87,7 @@ fn routes(app: app::app) {
         forms::signup(req, rep) { |username, password|
             import user::user;
 
-            let user = user::user(app.es, app.password_hasher, "blog",
+            let user = user::user(app.es, app.password_hasher, @"blog",
                                   username, password);
 
             alt user.create() {
@@ -99,7 +99,7 @@ fn routes(app: app::app) {
 
     // Login a user.
     app.get("^/login$") { |_req, rep, _m|
-        let hash: hashmap<str, str> = str_hash();
+        let hash: hashmap<str, @str> = str_hash();
         rep.render_200(app.mu, "login", hash)
     }
 
@@ -110,20 +110,20 @@ fn routes(app: app::app) {
               none { rep.reply_http(401u, "") }
               some(user) {
                 // Destroy any old sessions.
-                alt req.data.session {
+                alt copy req.data.session {
                   none {}
                   some(session) {
-                    rep.clear_cookie("session");
+                    rep.clear_cookie(@"session");
                     session.delete();
                   }
                 }
 
                 // Create a new session.
-                let session = session::session(app.es, "blog", user.id());
+                let session = session::session(app.es, @"blog", user.id());
 
                 alt session.create() {
                   ok(()) {
-                    let cookie = cookie::cookie("session", session.id());
+                    let cookie = cookie::cookie(@"session", session.id());
                     rep.set_cookie(cookie);
                     rep.reply_redirect("/")
                   }
@@ -138,11 +138,11 @@ fn routes(app: app::app) {
 
     // Logout a user.
     app.post("^/logout$") { |req, rep, _m|
-        alt req.data.session {
+        alt copy req.data.session {
           none {}
           some(session) {
             session.delete();
-            rep.clear_cookie("session");
+            rep.clear_cookie(@"session");
           }
         }
 
@@ -151,19 +151,18 @@ fn routes(app: app::app) {
 
     // Show all the users.
     app.get("^/users$") { |_req, rep, _m|
-        let users = user::all(app.es, "blog");
+        let users = str_hash();
+        users.insert("users", user::all(app.es, @"blog").to_mustache());
 
         // This can be simplified after mozilla/rust/issues/2258 is fixed.
-        rep.render_200(app.mu, "user_index", hash_from_strs([
-            ("users", users)
-        ]))
+        rep.render_200(app.mu, "user_index", users)
     }
 
     // Show a user.
     app.get("^/users/(?<id>[-_A-Za-z0-9]+)$") { |_req, rep, m|
-        let id = m.named("id");
+        let id = @m.named("id");
 
-        alt user::find(app.es, "blog", id) {
+        alt user::find(app.es, @"blog", id) {
           none { rep.reply_http(404u, "") }
           some(user) {
             rep.render_200(app.mu, "user_show", hash_from_strs([
@@ -175,9 +174,9 @@ fn routes(app: app::app) {
 
     // Delete a user.
     app.post("^/users/(?<id>[-_A-Za-z0-9]+)/delete$") { |_req, rep, m|
-        let id = m.named("id");
+        let id = @m.named("id");
 
-        alt user::find(app.es, "blog", id) {
+        alt user::find(app.es, @"blog", id) {
           none { rep.reply_http(404u, "") }
           some(user) {
             user.delete();
@@ -189,18 +188,18 @@ fn routes(app: app::app) {
 
     // Create a post.
     app.get("^/posts/new$") { |_req, rep, _m|
-        rep.render_200(app.mu, "post_new", post::post(app.es, ""))
+        rep.render_200(app.mu, "post_new", post::post(app.es, @""))
     }
 
     app.post("^/posts$") { |req, rep, _m|
         forms::post(req, rep) { |title, body|
-            let post = post::post(app.es, "");
+            let post = post::post(app.es, @"");
 
             post.set_title(title);
             post.set_body(body);
 
             alt post.save() {
-              ok(()) { rep.reply_redirect("/posts/" + post.id()) }
+              ok(()) { rep.reply_redirect("/posts/" + *post.id()) }
               err(e) { rep.reply_http(500u, e) }
             }
         }
@@ -208,7 +207,7 @@ fn routes(app: app::app) {
 
     // Show a post.
     app.get("^/posts/(?<id>[-_A-Za-z0-9]+)$") { |_req, rep, m|
-        let id = m.named("id");
+        let id = @m.named("id");
 
         alt post::find(app.es, id) {
           none { rep.reply_http(404u, "") }
@@ -226,7 +225,7 @@ fn routes(app: app::app) {
 
     // Edit a post.
     app.get("^/posts/(?<id>[-_A-Za-z0-9]+)/edit$") { |_req, rep, m|
-        let id = m.named("id");
+        let id = @m.named("id");
 
         alt post::find(app.es, id) {
           none { rep.reply_http(404u, "") }
@@ -240,7 +239,7 @@ fn routes(app: app::app) {
     }
 
     app.post("^/posts/(?<id>[-_A-Za-z0-9]+)$") { |req, rep, m|
-        let post_id = m.named("id");
+        let post_id = @m.named("id");
 
         alt post::find(app.es, post_id) {
           none { rep.reply_http(404u, "") }
@@ -250,7 +249,7 @@ fn routes(app: app::app) {
                 post.set_body(body);
 
                 alt post.save() {
-                  ok(id) { rep.reply_redirect("/posts/" + post_id) }
+                  ok(id) { rep.reply_redirect("/posts/" + *post_id) }
                   err(e) { rep.reply_http(500u, e) }
                 }
             }
@@ -260,7 +259,9 @@ fn routes(app: app::app) {
 
     // Delete a post.
     app.post("^/posts/(?<id>[-_A-Za-z0-9]+)/delete$") { |_req, rep, m|
-        alt post::find(app.es, m.named("id")) {
+        let id = @m.named("id");
+
+        alt post::find(app.es, id) {
           none { rep.reply_http(404u, "") }
           some(post) {
             post.delete();
@@ -272,17 +273,17 @@ fn routes(app: app::app) {
 
     // Create a comment.
     app.post("^/posts/(?<id>[-_A-Za-z0-9]+)/comments$") { |req, rep, m|
-        let id = m.named("id");
+        let id = @m.named("id");
 
         alt post::find(app.es, id) {
           none { rep.reply_http(404u, "") }
           some(post) {
             forms::comment(req, rep) { |body|
-                let comment = comment::comment(app.es, id, "");
+                let comment = comment::comment(app.es, id, @"");
                 comment.set_body(body);
 
                 alt comment.save() {
-                  ok(_) { rep.reply_redirect("/posts/" + id) }
+                  ok(_) { rep.reply_redirect("/posts/" + *id) }
                   err(e){ rep.reply_http(500u, e) }
                 }
             }
@@ -292,8 +293,8 @@ fn routes(app: app::app) {
 
     // Edit a comment.
     app.get("^/posts/(?<post_id>[-_A-Za-z0-9]+)/comments/(?<id>[-_A-Za-z0-9]+)/edit$") { |_req, rep, m|
-        let post_id = m.named("post_id");
-        let comment_id = m.named("id");
+        let post_id = @m.named("post_id");
+        let comment_id = @m.named("id");
 
         alt comment::find(app.es, post_id, comment_id) {
           none { rep.reply_http(404u, "") }
@@ -307,8 +308,8 @@ fn routes(app: app::app) {
     }
 
     app.post("^/posts/(?<post_id>[-_A-Za-z0-9]+)/comments/(?<id>[-_A-Za-z0-9]+)$") { |req, rep, m|
-        let post_id = m.named("post_id");
-        let comment_id = m.named("id");
+        let post_id = @m.named("post_id");
+        let comment_id = @m.named("id");
 
         alt comment::find(app.es, post_id, comment_id) {
           none { rep.reply_http(404u, "") }
@@ -317,7 +318,7 @@ fn routes(app: app::app) {
                 comment.set_body(body);
 
                 alt comment.save() {
-                  ok(id) { rep.reply_redirect("/posts/" + post_id) }
+                  ok(id) { rep.reply_redirect("/posts/" + *post_id) }
                   err(e) { rep.reply_http(500u, e) }
                 }
             }
@@ -327,15 +328,15 @@ fn routes(app: app::app) {
 
     // Delete a comment.
     app.post("^/posts/(?<post_id>[-_A-Za-z0-9]+)/comments/(?<id>[-_A-Za-z0-9]+)/delete$") { |_req, rep, m|
-        let post_id = m.named("post_id");
-        let comment_id = m.named("id");
+        let post_id = @m.named("post_id");
+        let comment_id = @m.named("id");
 
         alt comment::find(app.es, post_id, comment_id) {
           none { rep.reply_http(404u, "") }
           some(comment) {
             comment.delete();
 
-            rep.reply_redirect("/posts/" + post_id)
+            rep.reply_redirect("/posts/" + *post_id)
           }
         }
     }

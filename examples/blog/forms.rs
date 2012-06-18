@@ -1,5 +1,5 @@
-fn signup(req: @request<app::data>, rep: @response, f: fn(str, str)) {
-    let form = uri::decode_form_urlencoded(req.body());
+fn signup(req: @request<app::data>, rep: @response, f: fn(@str, @str)) {
+    let form = uri::decode_form_urlencoded(*req.body());
 
     let username = alt form.find("username") {
       none {
@@ -7,7 +7,7 @@ fn signup(req: @request<app::data>, rep: @response, f: fn(str, str)) {
         ret;
 
       }
-      some(usernames) { usernames[0]}
+      some(usernames) { (*usernames)[0u] }
     };
 
     let password = alt form.find("password") {
@@ -15,7 +15,7 @@ fn signup(req: @request<app::data>, rep: @response, f: fn(str, str)) {
         rep.reply_http(400u, "missing password");
         ret;
       }
-      some(passwords) { passwords[0] }
+      some(passwords) { (*passwords)[0u] }
     };
 
     let password_confirm = alt form.find("password_confirm") {
@@ -23,7 +23,7 @@ fn signup(req: @request<app::data>, rep: @response, f: fn(str, str)) {
         rep.reply_http(400u, "missing password confirmation");
         ret;
       }
-      some(password_confirms) { password_confirms[0] }
+      some(password_confirms) { (*password_confirms)[0u] }
     };
 
     if password != password_confirm {
@@ -34,15 +34,15 @@ fn signup(req: @request<app::data>, rep: @response, f: fn(str, str)) {
     f(username, password)
 }
 
-fn login(req: @request<app::data>, rep: @response, f: fn(str, str)) {
-    let form = uri::decode_form_urlencoded(req.body());
+fn login(req: @request<app::data>, rep: @response, f: fn(@str, @str)) {
+    let form = uri::decode_form_urlencoded(*req.body());
 
     let username = alt form.find("username") {
       none {
         rep.reply_http(400u, "missing username");
         ret;
       }
-      some(usernames) { usernames[0] }
+      some(usernames) { (*usernames)[0u] }
     };
 
     let password = alt form.find("password") {
@@ -50,24 +50,24 @@ fn login(req: @request<app::data>, rep: @response, f: fn(str, str)) {
         rep.reply_http(400u, "missing password");
         ret;
       }
-      some(passwords) { passwords[0] }
+      some(passwords) { (*passwords)[0u] }
     };
 
     f(username, password)
 }
 
-fn post(req: @request<app::data>, rep: @response, f: fn(str, str)) {
-    let form = uri::decode_form_urlencoded(req.body());
+fn post(req: @request<app::data>, rep: @response, f: fn(@str, @str)) {
+    let form = uri::decode_form_urlencoded(*req.body());
 
     let title = alt form.find("title") {
       none {
         rep.reply_http(400u, "missing title");
         ret;
       }
-      some(titles) { titles[0] }
+      some(titles) { (*titles)[0u] }
     };
 
-    if title.trim() == "" {
+    if (*title).trim() == "" {
         rep.reply_http(400u, "cannot have an empty title");
         ret;
     }
@@ -77,10 +77,10 @@ fn post(req: @request<app::data>, rep: @response, f: fn(str, str)) {
         rep.reply_http(400u, "missing body");
         ret;
       }
-      some(bodys) { bodys[0] }
+      some(bodys) { (*bodys)[0u] }
     };
 
-    if body.trim() == "" {
+    if (*body).trim() == "" {
         rep.reply_http(400u, "cannot have an empty body");
         ret;
     }
@@ -88,18 +88,18 @@ fn post(req: @request<app::data>, rep: @response, f: fn(str, str)) {
     f(title, body)
 }
 
-fn comment(req: @request<app::data>, rep: @response, f: fn(str)) {
-    let form = uri::decode_form_urlencoded(req.body());
+fn comment(req: @request<app::data>, rep: @response, f: fn(@str)) {
+    let form = uri::decode_form_urlencoded(*req.body());
 
     let body = alt form.find("body") {
       none {
         rep.reply_http(400u, "missing body");
         ret;
       }
-      some(bodys) { bodys[0] }
+      some(bodys) { (*bodys)[0u] }
     };
 
-    if body.trim() == "" {
+    if (*body).trim() == "" {
         rep.reply_http(400u, "cannot have an empty body");
         ret;
     }

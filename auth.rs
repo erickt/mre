@@ -1,14 +1,19 @@
 import base64::{to_base64, from_base64};
 
-fn password(hasher: hasher, password: str) -> str {
-    hasher.encode(password, hasher.salt())
+export password;
+export hasher;
+export pbkdf2_sha1;
+export default_pbkdf2_sha1;
+
+fn password(hasher: hasher, password: @str) -> str {
+    hasher.encode(password, @hasher.salt())
 }
 
 iface hasher {
     fn algorithm() -> str;
     fn salt() -> [u8];
-    fn encode(pass: str, salt: [u8]) -> str;
-    fn verify(pass: str, encoded: str) -> bool;
+    fn encode(pass: @str, salt: @[u8]) -> str;
+    fn verify(pass: @str, encoded: @str) -> bool;
 }
 
 type pbkdf2_sha1 = {
@@ -31,8 +36,8 @@ impl of hasher for pbkdf2_sha1 {
         crypto::rand::rand_bytes(self.keylen)
     }
 
-    fn encode(pass: str, salt: [u8]) -> str {
-        self.encode_iterations(pass, salt, self.iterations)
+    fn encode(pass: @str, salt: @[u8]) -> str {
+        self.encode_iterations(*pass, *salt, self.iterations)
     }
 
     fn encode_iterations(pass: str, salt: [u8], iterations: uint) -> str {
@@ -46,17 +51,16 @@ impl of hasher for pbkdf2_sha1 {
         #fmt("%s$%u$%s$%s", self.algorithm(), self.iterations, salt, hash)
     }
 
-    fn verify(pass: str, encoded: str) -> bool {
-        let parts = str::splitn_char(encoded, '$', 3u);
-        let algorithm = parts[0u];
+    fn verify(pass: @str, encoded: @str) -> bool {
+        let parts = str::splitn_char(*encoded, '$', 3u);
+        assert self.algorithm() == parts[0u];
+
         let iterations = uint::from_str(parts[1u]).get();
         let salt = parts[2u].from_base64();
 
-        assert algorithm == self.algorithm();
+        let encoded_2 = self.encode_iterations(*pass, salt, iterations);
 
-        let encoded_2 = self.encode_iterations(pass, salt, iterations);
-
-        constant_time_compare_str(encoded, encoded_2)
+        constant_time_compare_str(*encoded, encoded_2)
     }
 }
 

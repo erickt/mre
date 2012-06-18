@@ -30,9 +30,9 @@ fn app() -> app {
     let middleware = [
         mre::middleware::logger(io::stdout()),
         mre::middleware::session(es,
-            "blog",
-            "blog",
-            "session"
+            @"blog",
+            @"blog",
+            @"session"
         ) { |req: @request<data>, session, user|
             req.data.session = some(session);
             req.data.user = some(user);

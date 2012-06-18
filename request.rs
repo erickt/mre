@@ -17,9 +17,9 @@ enum method {
 }
 
 type accept = {
-    mime_type: (str, str),
+    mime_type: (@str, @str),
     quality: float,
-    options: [str],
+    options: @[@str],
 };
 
 type request<T> = {
@@ -38,7 +38,9 @@ fn request<T: copy>(req: @mongrel2::request, rep: @response, data: T)
         ret none
       }
       some(methods) {
-        alt methods[0] {
+        assert (*methods).len() == 1u;
+
+        alt *(*methods)[0u] {
           "HEAD" { HEAD }
           "GET" { GET }
           "POST" { POST }
@@ -79,12 +81,12 @@ fn request<T: copy>(req: @mongrel2::request, rep: @response, data: T)
 }
 
 #[doc = "Split a mime string into the mime type and subtype."]
-fn parse_mime_type(mime_type: str) -> (str, str) {
+fn parse_mime_type(mime_type: str) -> (@str, @str) {
     let parts = str::splitn_char(mime_type, '/', 1u);
-    let typ = parts[0];
-    let subtyp = if parts.len() == 2u { parts[1] } else { "*" };
+    let typ = copy parts[0];
+    let subtyp = if parts.len() == 2u { copy parts[1] } else { "*" };
 
-    (typ, subtyp)
+    (@typ, @subtyp)
 }
 
 #[doc = ""]
@@ -94,7 +96,7 @@ fn parse_accept_header(header: str) -> [accept] {
 
         let mime_type = parse_mime_type(parts[0]);
         let mut quality = 1.0;
-        let mut options = [];
+        let mut options = dvec();
 
         if parts.len() > 1u {
             vec::iter_between(parts, 1u, parts.len()) { |option|
@@ -105,12 +107,16 @@ fn parse_accept_header(header: str) -> [accept] {
                       some(q) { quality = q; }
                     }
                 } else {
-                    vec::push(options, option);
+                    options.push(@copy option);
                 }
             }
         }
 
-        { mime_type: mime_type, quality: quality, options: options }
+        {
+            mime_type: mime_type,
+            quality: quality,
+            options: @vec::from_mut(dvec::unwrap(options))
+        }
     };
 
     // Sort by quality, with highest quality first.
@@ -118,11 +124,11 @@ fn parse_accept_header(header: str) -> [accept] {
 }
 
 impl request<T: copy> for @request<T> {
-    fn body() -> [u8] {
+    fn body() -> @[u8] {
         self.req.body
     }
 
-    fn path() -> str {
+    fn path() -> @str {
         self.req.path
     }
 
@@ -131,21 +137,24 @@ impl request<T: copy> for @request<T> {
         self.req.is_disconnect()
     }
 
-    fn find_headers(key: str) -> option<[str]> {
+    fn find_headers(key: str) -> option<@dvec<@str>> {
         self.req.headers.find(key)
     }
 
-    fn find_header(key: str) -> option<str> {
-        self.find_headers(key).chain { |values|
-            if values.len() == 0u {
+    fn find_header(key: str) -> option<@str> {
+        alt self.find_headers(key) {
+          none { none }
+          some(values) { 
+            if (*values).len() == 0u {
                 none
             } else {
-                some(values[0])
+                some((*values)[0u])
             }
+          }
         }
     }
 
-    fn content_type() -> option<str> {
+    fn content_type() -> option<@str> {
         self.find_header("content-type")
     }
 
@@ -156,25 +165,34 @@ impl request<T: copy> for @request<T> {
             let accepts = alt self.find_header("accept") {
               none {
                 // If we don't have the header, assume we accept everything.
-                [{ mime_type: ("*", "*"), quality: 1.0, options: [] }]
+                [{
+                    mime_type: (@"*", @"*"),
+                    quality: 1.0,
+                    options: @[]
+                }]
               }
-              some(accept) { parse_accept_header(accept) }
+              some(accept) { parse_accept_header(*accept) }
             };
 
-            self._accepts = some(accepts);
+            self._accepts = some(copy accepts);
 
             accepts
           }
-          some(accepts) { accepts }
+          some(accepts) { copy accepts }
         }
     }
 
     fn accept(mime_type: str) -> bool {
-        let mime_type = parse_mime_type(mime_type);
+        let (typ, subtyp) = parse_mime_type(mime_type);
 
         for self.accepts().each { |accept|
-            if accept.mime_type == ("*", "*") { ret true; }
-            if accept.mime_type == mime_type { ret true; }
+            let (t, s) = accept.mime_type;
+
+            if
+              (*typ == "*" || typ == t) &&
+              (*subtyp == "*" || subtyp == s) {
+                ret true;
+            }
         }
 
         false
@@ -182,26 +200,32 @@ impl request<T: copy> for @request<T> {
 
     fn negotiate_media_types<U: copy>(mime_types: [(str, U)]) -> option<U> {
         let mime_types = mime_types.map { |t_v|
-            let (t, v) = t_v;
-            let (t, s) = parse_mime_type(t);
-            (t, s, v)
+            alt t_v {
+              (t, v) {
+                alt parse_mime_type(t) {
+                  (t, s) { (t, s, v) }
+                }
+              }
+            }
         };
 
         // Walk over the accepts in order and return the first item that
         // matches.
         for self.accepts().each { |accept|
-            let (typ, subtyp) = accept.mime_type;
-
-            for mime_types.each { |t_s_v|
-                let (t, s, v) = t_s_v;
-
-                #error("%? %? -> %? %?", typ, subtyp, t, s);
-
-                if typ == "*" || typ == t {
-                    if subtyp == "*" || subtyp == s {
-                        ret some(v)
+            alt accept.mime_type {
+              (typ, subtyp) {
+                for mime_types.each { |t_s_v|
+                    alt t_s_v {
+                      (t, s, v) {
+                        if
+                         (*typ == "*" || typ == t) &&
+                         (*subtyp == "*" || subtyp == s) {
+                          ret some(v)
+                        }
+                      }
                     }
                 }
+              }
             }
         }
 

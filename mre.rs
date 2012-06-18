@@ -21,15 +21,15 @@ type mre<T: copy> = @{
 Helper function to abstract away some of the boilerplate code.
 "]
 fn mre<T: copy>(zmq: zmq::context,
-                sender_id: option<str>,
-                req_addrs: [str],
-                rep_addrs: [str],
+                +sender_id: option<str>,
+                +req_addrs: [str],
+                +rep_addrs: [str],
                 middleware: [middleware<T>],
                 data: fn@() -> T) -> mre<T> {  
     @{
         m2: mongrel2::connect(zmq, sender_id, req_addrs, rep_addrs),
         router: router::router(),
-        middleware: middleware,
+        middleware: copy middleware,
         data: data
     }
 }
@@ -59,7 +59,7 @@ impl mre<T: copy> for mre<T> {
             if self.middleware.wrap(req, rep) {
                 // Only run the handler if the middleware hasn't handled
                 // the request.
-                alt self.router.find(req.method, req.path()) {
+                alt self.router.find(req.method, *req.path()) {
                   none { rep.reply_http(404u, "") }
                   some((handler, m)) { handler(req, rep, m) }
                 };

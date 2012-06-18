@@ -23,6 +23,7 @@ mod session;
 mod user;
 mod to_bytes;
 
+import dvec::{dvec, extensions};
 import io::{reader, reader_util, writer, writer_util};
 import result::{result, ok, err};
 

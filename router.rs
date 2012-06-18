@@ -4,22 +4,25 @@ import response::response;
 type handler<T> = fn@(@request<T>, @response, pcre::match);
 
 type router<T> = {
-    mut routes: [(method, @pcre::pcre, handler<T>)],
+    routes: dvec<(method, @pcre::pcre, handler<T>)>,
 };
 
 fn router<T>() -> router<T> {
-    { mut routes: [] }
+    { routes: dvec() }
 }
 
 impl router<T> for router<T> {
     fn add(method: method, pattern: str, handler: handler<T>) {
-        self.routes += [(method, @pcre::mk_pcre(pattern), handler)];
+        self.routes.push((method, @pcre::mk_pcre(pattern), handler));
     }
 
     fn add_patterns(items: [(method, str, handler<T>)]) {
-        vec::iter(items) { |item|
-            let (method, pattern, handler) = item;
-            self.add(method, pattern, handler)
+        for items.each { |item|
+            alt item {
+              (method, pattern, handler) {
+                self.add(method, pattern, handler)
+              }
+            }
         };
     }
 

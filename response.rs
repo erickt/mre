@@ -1,20 +1,22 @@
 import cookie::cookie;
 import to_bytes::to_bytes;
 
+type header_map = hashmap<str, @dvec<@str>>;
+
 type response = {
     mut code: uint,
-    mut status: str,
-    headers: hashmap<str, [str]>,
-    mut reply: fn@([u8]),
+    mut status: @str,
+    headers: @header_map,
+    mut reply: fn@(@[u8]),
     mut end: fn@(),
 };
 
 fn response(m2: mongrel2::connection, req: @mongrel2::request) -> @response {
     @{
         mut code: 200u,
-        mut status: "OK",
-        headers: str_hash(),
-        mut reply: { |msg| m2.reply(req, msg); },
+        mut status: @"OK",
+        headers: @str_hash(),
+        mut reply: { |msg: @[u8]| m2.reply(req, *msg); },
         mut end: { || m2.reply(req, str::bytes("")); },
     }
 }
@@ -79,47 +81,47 @@ fn code_to_status(code: uint) -> str {
 }
 
 impl response for @response {
-    fn set_status(code: uint, status: str) {
+    fn set_status(code: uint, +status: str) {
         self.code = code;
-        self.status = status;
+        self.status = @status;
     }
 
-    fn find_headers(key: str) -> option<[str]> {
-        self.headers.find(key)
+    fn find_headers(key: str) -> option<@dvec<@str>> {
+        (*self.headers).find(key)
     }
 
-    fn find_header(key: str) -> option<str> {
+    fn find_header(key: str) -> option<@str> {
         self.find_headers(key).chain { |values|
-            if values.len() == 0u {
+            if (*values).len() == 0u {
                 none
             } else {
-                some(values[0])
+                some((*values)[0u])
             }
         }
     }
 
-    fn set_header(name: str, value: str) {
-        let mut values = alt self.headers.find(name) {
-          none { [] }
+    fn set_header(+name: str, +value: str) {
+        let mut values = alt (*self.headers).find(name) {
+          none {
+            let values = @dvec();
+            (*self.headers).insert(name, values);
+            values
+          }
           some(values) { values }
         };
 
-        vec::push(values, value);
-
-        self.headers.insert(name, values);
+        (*values).push(@value);
     }
 
     fn set_cookie(cookie: cookie::cookie) {
-        let header = alt cookie.to_header() {
-          ok(header) { header }
+        alt cookie.to_header() {
+          ok(header) { self.set_header("Set-Cookie", copy header) }
           err(e) { fail e; }
-        };
-
-        self.set_header("Set-Cookie", header);
+        }
     }
 
-    fn clear_cookie(name: str) {
-        let cookie = cookie::cookie(name, "");
+    fn clear_cookie(name: @str) {
+        let cookie = cookie::cookie(name, @"");
         cookie.max_age = some(0u);
         self.set_cookie(cookie);
     }
@@ -128,26 +130,28 @@ impl response for @response {
         self.set_header("Content-Length", uint::to_str(len, 10u));
     }
 
-    fn set_content_type(content_type: str) {
+    fn set_content_type(+content_type: str) {
         self.set_header("Content-Type", content_type)
     }
 
+    fn each_header(f: fn(&&str, &&@dvec<@str>) -> bool) {
+        (*self.headers).each(f)
+    }
+
     fn reply_head() {
-        let mut rep = [];
-        rep += str::bytes(#fmt("HTTP/1.1 %u ", self.code));
-        rep += str::bytes(self.status);
-        rep += str::bytes("\r\n");
+        let mut rep = dvec();
+        rep.push_all(str::bytes(#fmt("HTTP/1.1 %u %s\r\n",
+                                     self.code,
+                                     *self.status)));
 
-        for self.headers.each { |key, values|
-            let lines = vec::map(values) { |value|
-                str::bytes(key + ": " + value + "\r\n")
-            };
-
-            rep += vec::concat(lines);
+        for (*self.headers).each { |key, values|
+            for (*values).each { |value|
+                rep.push_all(str::bytes(key + ": " + *value + "\r\n"));
+            }
         }
-        rep += str::bytes("\r\n");
+        rep.push_all(str::bytes("\r\n"));
 
-        self.reply(rep);
+        self.reply(@vec::from_mut(dvec::unwrap(rep)));
     }
 
     fn reply_http<T: to_bytes>(code: uint, body: T) {
@@ -155,7 +159,7 @@ impl response for @response {
         self.set_status(code, code_to_status(code));
         self.set_len(body.len());
         self.reply_head();
-        self.reply(body);
+        self.reply(@body);
         self.end();
     }
 
@@ -174,7 +178,7 @@ impl response for @response {
         self.reply_http(code, json::to_str(body.to_json()))
     }
 
-    fn reply_redirect(location: str) {
+    fn reply_redirect(+location: str) {
         self.set_header("Location", location);
         self.reply_http(302u, "")
     }

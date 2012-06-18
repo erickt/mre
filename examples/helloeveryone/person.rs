@@ -7,13 +7,13 @@ import mre::model::{model, error};
 // type error, so we wrap the raw models in an interface, and hide the
 // implementation inside a function.
 iface person {
-    fn id() -> str;
+    fn id() -> @str;
 
-    fn timestamp() -> str;
-    fn set_timestamp(timestamp: str) -> bool;
+    fn timestamp() -> @str;
+    fn set_timestamp(timestamp: @str) -> bool;
 
-    fn name() -> str;
-    fn set_name(name: str) -> bool;
+    fn name() -> @str;
+    fn set_name(name: @str) -> bool;
 
     fn create() -> result<(), error>;
     fn save() -> result<(), error>;
@@ -24,23 +24,23 @@ iface person {
 // person interface.
 fn mk_person(model: model) -> person {
     impl of person for model {
-        fn id() -> str {
+        fn id() -> @str {
             self._id
         }
 
-        fn timestamp() -> str {
+        fn timestamp() -> @str {
             self.get_str("timestamp")
         }
 
-        fn set_timestamp(timestamp: str) -> bool {
+        fn set_timestamp(timestamp: @str) -> bool {
             self.set_str("timestamp", timestamp)
         }
 
-        fn name() -> str {
+        fn name() -> @str {
             self.get_str("name")
         }
 
-        fn set_name(name: str) -> bool {
+        fn set_name(name: @str) -> bool {
             self.set_str("name", name)
         }
 
@@ -64,12 +64,12 @@ fn mk_person(model: model) -> person {
 }
 
 // Create a new person model.
-fn person(es: client, name: str) -> person {
+fn person(es: client, name: @str) -> person {
     // We'll let ES come up with a unique id.
-    let person = mk_person(model(es, "helloeveryone", "person", ""));
+    let person = mk_person(model(es, @"helloeveryone", @"person", @""));
 
     person.set_name(name);
-    person.set_timestamp(time::now().rfc3339());
+    person.set_timestamp(@time::now().rfc3339());
 
     person
 }
@@ -82,10 +82,10 @@ fn last_50(es: client) -> [person] {
             .set_indices(["helloeveryone"])
             .set_types(["person"])
             .set_source(*json_dict_builder()
-                .insert_float("size", 50.0)
+                .insert("size", 50.0)
                 .insert_list("sort") { |bld|
                     bld.push_dict { |bld|
-                        bld.insert_str("timestamp", "desc");
+                        bld.insert("timestamp", "desc");
                     };
                 }
             );

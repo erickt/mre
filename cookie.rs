@@ -2,16 +2,16 @@ import std::time;
 import std::time::tm;
 
 type cookie = @{
-    name: str,
-    value: str,
-    mut path: option<str>,
-    mut domain: option<str>,
+    name: @str,
+    value: @str,
+    mut path: option<@str>,
+    mut domain: option<@str>,
     mut max_age: option<uint>,
     mut secure: bool,
     mut http_only: bool
 };
 
-fn cookie(name: str, value: str) -> cookie {
+fn cookie(name: @str, value: @str) -> cookie {
     @{
         name: name,
         value: value,
@@ -27,43 +27,43 @@ impl cookie for cookie {
     fn to_header() -> result<str, str> {
         // FIXME: Move error checking to the constructor.
 
-        if !cookie_parser::is_name(self.name) {
+        if !cookie_parser::is_name(*self.name) {
             ret err("invalid name");
         }
 
-        let mut cookie = if self.value == "" {
-            [self.name + "="]
+        let mut cookie = if *self.value == "" {
+            *self.name + "="
         } else {
-            if !cookie_parser::is_value(self.value) {
+            if !cookie_parser::is_value(*self.value) {
                 ret err("invalid value");
             }
 
-            [self.name + "=" + self.value]
+            *self.name + "=" + *self.value
         };
 
-        alt self.domain {
+        alt copy self.domain {
           none {}
           some(domain) {
             if cookie_parser::is_domain(domain) {
-                vec::push(cookie, "domain=" + domain);
+                cookie += "; domain=" + *domain;
             } else {
                 ret err("invalid domain");
             }
           }
         }
 
-        alt self.path {
+        alt copy self.path {
           none {}
           some(path) {
             if cookie_parser::is_path(path) {
-                vec::push(cookie, "path=" + path);
+                cookie += "; path=" + *path;
             } else {
                 ret err("invalid path");
             }
           }
         }
 
-        alt self.max_age {
+        alt copy self.max_age {
           none {}
           some(max_age) {
             let tm = if max_age == 0u {
@@ -76,24 +76,24 @@ impl cookie for cookie {
             // Not every browser supports max-age...
             //vec::push(cookie, "max-age=" + uint::str(max_age));
 
-            vec::push(cookie, "expires=" + tm.rfc822());
+            cookie += "; expires=" + tm.rfc822();
           }
         }
 
-        if self.secure    { vec::push(cookie, "Secure"); }
-        if self.http_only { vec::push(cookie, "HttpOnly"); }
+        if self.secure    { cookie += "; Secure"; }
+        if self.http_only { cookie += "; HttpOnly"; }
 
-        ok(str::connect(cookie, "; "))
+        ok(cookie)
     }
 }
 
-fn parse_header(header: str) -> result<[cookie], str> {
+fn parse_header(header: str) -> result<@[cookie], str> {
     let header = header.trim();
 
     // Exit early if empty.
     if header == "" { ret err("empty cookie") }
 
-    let mut cookies = [];
+    let cookies = dvec();
 
     for header.split_char(';').each { |line|
         let parts = str::splitn_char(line, '=', 1u);
@@ -112,19 +112,23 @@ fn parse_header(header: str) -> result<[cookie], str> {
             ret err(#fmt("invalid cookie value: %?", value));
         }
 
-        vec::push(cookies, cookie(name, value));
+        cookies.push(cookie(@name, @value));
     }
 
-    ok(cookies)
+    ok(@vec::from_mut(dvec::unwrap(cookies)))
 }
 
-fn parse_headers(headers: [str]) -> result<hashmap<str, cookie>, str> {
+fn parse_headers(headers: @dvec<@str>) -> result<hashmap<str, cookie>, str> {
     let mut cookies = str_hash();
 
-    for headers.each { |header|
-        alt parse_header(header) {
-          ok(cs) { cs.iter { |cookie| cookies.insert(cookie.name, cookie); } }
-          err(e) { ret err(e); }
+    for (*headers).each { |header|
+        alt parse_header(*header) {
+          ok(cs) {
+            for (*cs).each { |cookie|
+                cookies.insert(copy *cookie.name, cookie);
+            }
+          }
+          err(e) { ret err(copy e); }
         }
     }
 
@@ -183,13 +187,13 @@ mod cookie_parser {
         !quoted && pos == len
     }
 
-    fn is_domain(_domain: str) -> bool {
+    fn is_domain(_domain: @str) -> bool {
         // FIXME: Actually implement.
         true
     }
 
-    fn is_path(path: str) -> bool {
-        for path.each_char { |ch|
+    fn is_path(path: @str) -> bool {
+        for (*path).each_char { |ch|
             if !char::is_ascii(ch) || http_parser::is_ctl(ch) || ch == ';' {
                 ret false;
             }

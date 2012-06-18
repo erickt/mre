@@ -10,8 +10,9 @@ use crypto;
 
 import io::{reader, reader_util};
 import result::{result, ok, err, extensions};
+import dvec::{dvec, extensions};
 import std::json;
-import std::json::json;
+import std::json::{json, to_json};
 import std::map::{hashmap, str_hash, hash_from_strs};
 
 import mre::{cookie, model, session, user};
@@ -20,7 +21,7 @@ import mre::response::response;
 import mre::session::session;
 import mre::to_bytes::to_bytes;
 import mustache::to_mustache;
-import zmq::error;
+import zmq::to_str;
 
 import elasticsearch::{search_builder, json_dict_builder};
 

@@ -19,28 +19,28 @@ fn logger<T: copy>(logger: io::writer) -> middleware<T> {
         let old_end = rep.end;
         rep.end = { ||
             let address = alt req.find_header("x-forwarded-for") {
-              none { "-" }
+              none { @"-" }
               some(address) { address }
             };
 
             let method = alt req.find_header("METHOD") {
-              none { "-" }
+              none { @"-" }
               some(method) { method }
             };
 
             let len = alt rep.find_header("Content-Length") {
-              none { "-" }
+              none { @"-" }
               some(len) { len }
             };
 
             logger.write_line(#fmt("%s - %s [%s] \"%s %s\" %u %s",
-                address,
+                *address,
                 "-",
                 time::now().strftime("%d/%m/%Y:%H:%M:%S %z"),
-                method,
-                req.path(),
+                *method,
+                *req.path(),
                 rep.code,
-                len));
+                *len));
 
             old_end();
         };
@@ -50,13 +50,15 @@ fn logger<T: copy>(logger: io::writer) -> middleware<T> {
 }
 
 fn session<T: copy>(es: elasticsearch::client,
-                    session_index: str,
-                    user_index: str,
-                    cookie_name: str,
+                    session_index: @str,
+                    user_index: @str,
+                    cookie_name: @str,
                     f: fn@(@request<T>, session::session, user::user))
   -> middleware<T> {
     { |req: @request<T>, rep: @response|
-        req.cookies.find(cookie_name).iter { |cookie|
+        alt req.cookies.find(*cookie_name) {
+          none { }
+          some(cookie) {
             alt session::find(es, session_index, cookie.value) {
               none {
                 // Unknown session, so just delete the cookie.
@@ -74,6 +76,7 @@ fn session<T: copy>(es: elasticsearch::client,
                 }
               }
             }
+          }
         }
 
         true
