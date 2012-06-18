@@ -56,7 +56,9 @@ type person = _person;
 
 // Create a new person model.
 fn person(es: client, name: @str) -> person {
-    // We'll let ES come up with a unique id.
+    // Create a person. We'll store the model in the ES index named
+    // "helloeveryone", under the type "person". We'd like ES to make the index
+    // for us, so we leave the id blank.
     let person = _person(model(es, @"helloeveryone", @"person", @""));
 
     person.set_name(name);
@@ -65,9 +67,11 @@ fn person(es: client, name: @str) -> person {
     person
 }
 
-// Return the last 100 people we have said hello to.
+// Return the last 50 people we have said hello to.
 fn last_50(es: client) -> [person] {
-    // Sort by reverse timestamp.
+    // This query can be a little complicated for those who have never used
+    // elasticsearch. All it says is that we want to fetch 50 documents on the
+    // index "helloeveryone" and the type "person", sorted by time.
     model::search(es) { |bld|
         bld
             .set_indices(["helloeveryone"])
@@ -80,5 +84,8 @@ fn last_50(es: client) -> [person] {
                     };
                 }
             );
-    }.map { |model| _person(model) }
+    }.map { |model|
+        // Construct a person model from the raw model data.
+        _person(model)
+    }
 }
