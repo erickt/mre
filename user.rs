@@ -7,58 +7,47 @@ export user;
 export find;
 export all;
 
-iface user {
-    fn id() -> @str;
+class _user {
+    let model: model;
 
-    fn password() -> @str;
-    fn set_password(hasher: hasher, password: @str) -> bool;
-    fn verify_password(hasher: hasher, password: @str) -> bool;
-
-    fn create() -> result<(), error>;
-    fn save() -> result<(), error>;
-
-    fn delete();
-}
-
-fn mk_user(model: model) -> user {
-    impl of user for model {
-        fn id() -> @str { self._id }
-
-        fn password() -> @str {
-            self.get_str("password")
-        }
-
-        fn set_password(hasher: hasher, password: @str) -> bool {
-            let password = auth::password(hasher, password);
-            self.set_str("password", @password)
-        }
-
-        fn verify_password(hasher: hasher, password: @str) -> bool {
-            hasher.verify(password, self.password())
-        }
-
-        fn create() -> result<(), error> {
-            import model::model;
-            self.create()
-        }
-
-        fn save() -> result<(), error> {
-            import model::model;
-            self.save()
-        }
-
-        fn delete() {
-            import model::model;
-            self.delete()
-        }
+    new(model: model) {
+        self.model = model;
     }
 
-    model as user
+    fn id() -> @str { self.model._id }
+
+    fn password() -> @str {
+        self.model.get_str("password")
+    }
+
+    fn set_password(hasher: hasher, password: @str) -> bool {
+        let password = auth::password(hasher, password);
+        self.model.set_str("password", @password)
+    }
+
+    fn verify_password(hasher: hasher, password: @str) -> bool {
+        hasher.verify(password, self.password())
+    }
+
+    fn create() -> result<(), error> {
+        self.model.create()
+    }
+
+    fn save() -> result<(), error> {
+        self.model.save()
+    }
+
+    fn delete() {
+        import model::model;
+        self.model.delete()
+    }
 }
+
+type user = _user;
 
 fn user(es: client, hasher: hasher, index: @str,
         username: @str, password: @str) -> user {
-    let user = mk_user(model(es, index, @"user", username));
+    let user = _user(model(es, index, @"user", username));
 
     user.set_password(hasher, password);
 
@@ -66,9 +55,9 @@ fn user(es: client, hasher: hasher, index: @str,
 }
 
 fn find(es: client, index: @str, id: @str) -> option<user> {
-    model::find(es, index, @"user", id).map { |model| mk_user(model) }
+    model::find(es, index, @"user", id).map { |model| _user(model) }
 }
 
 fn all(es: client, index: @str) -> [user] {
-    model::all(es, index, @"user").map { |model| mk_user(model) }
+    model::all(es, index, @"user").map { |model| _user(model) }
 }
