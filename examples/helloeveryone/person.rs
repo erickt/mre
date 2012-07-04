@@ -68,24 +68,24 @@ fn person(es: client, name: @str) -> person {
 }
 
 // Return the last 50 people we have said hello to.
-fn last_50(es: client) -> [person] {
+fn last_50(es: client) -> ~[person] {
     // This query can be a little complicated for those who have never used
     // elasticsearch. All it says is that we want to fetch 50 documents on the
     // index "helloeveryone" and the type "person", sorted by time.
-    model::search(es) { |bld|
+    do model::search(es) |bld| {
         bld
-            .set_indices(["helloeveryone"])
-            .set_types(["person"])
+            .set_indices(~["helloeveryone"])
+            .set_types(~["person"])
             .set_source(*json_dict_builder()
                 .insert("size", 50.0)
-                .insert_list("sort") { |bld|
-                    bld.push_dict { |bld|
+                .insert_list("sort", |bld| {
+                    bld.push_dict(|bld| {
                         bld.insert("timestamp", "desc");
-                    };
-                }
+                    });
+                })
             );
-    }.map { |model|
+    }.map(|model|
         // Construct a person model from the raw model data.
         _person(model)
-    }
+    )
 }

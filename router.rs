@@ -13,11 +13,17 @@ fn router<T>() -> router<T> {
 
 impl router<T> for router<T> {
     fn add(method: method, pattern: str, handler: handler<T>) {
-        self.routes.push((method, @pcre::mk_pcre(pattern), handler));
+        let regex = pcre::pcre(pattern);
+
+        if regex.is_err() {
+            fail *regex.get_err();
+        }
+        
+        self.routes.push((method, @result::unwrap(regex), handler));
     }
 
-    fn add_patterns(items: [(method, str, handler<T>)]) {
-        for items.each { |item|
+    fn add_patterns(items: ~[(method, str, handler<T>)]) {
+        for items.each |item| {
             alt item {
               (method, pattern, handler) {
                 self.add(method, pattern, handler)
@@ -27,13 +33,13 @@ impl router<T> for router<T> {
     }
 
     fn find(method: method, path: str) -> option<(handler<T>, pcre::match)> {
-        for self.routes.each() { |item|
+        for self.routes.each() |item| {
             let (meth, regex, handler) = item;
 
             if method == meth {
-                let m = (*regex).match(path);
-                if m.matched() {
-                    ret some((handler, m));
+                alt (*regex).match(path) {
+                  none { }
+                  some(m) { ret some((handler, m)); }
                 }
             }
         }
@@ -47,10 +53,10 @@ mod tests {
     import request::GET;
 
     fn check_path<T>(router: router<T>, method: method, path: str,
-                     f: handler<T>, captures: [str]) {
+                     f: handler<T>, captures: @~[@str]) {
         let (handler, m) = router.find(method, path).get();
         assert handler == f;
-        assert m.substrings() == captures;
+        assert m.substrings == captures;
     }
 
     #[test]
@@ -65,7 +71,7 @@ mod tests {
         let d = { |_req, rep: @response, _m| rep.reply_http(200u, "") };
         let z = { |_req, rep: @response, _m| rep.reply_http(200u, "") };
 
-        router.add_patterns([
+        router.add_patterns(~[
             (GET, "^/$", a),
             (GET, "^/foo$", b),
             (GET, "^/foo/bar/baz$", c),
@@ -73,11 +79,11 @@ mod tests {
             (GET, "", z)
         ]);
 
-        check_path(router, GET, "/", a, []);
-        check_path(router, GET, "/foo", b, []);
-        check_path(router, GET, "/foo/bar/baz", c, []);
-        check_path(router, GET, "/a12/b34", d, ["a12", "b34"]);
-        check_path(router, GET, "/a12/b34/c/d", d, ["a12", "b34/c/d"]);
-        check_path(router, GET, "lalala", z, []);
+        check_path(router, GET, "/", a, @~[]);
+        check_path(router, GET, "/foo", b, @~[]);
+        check_path(router, GET, "/foo/bar/baz", c, @~[]);
+        check_path(router, GET, "/a12/b34", d, @~[@"a12", @"b34"]);
+        check_path(router, GET, "/a12/b34/c/d", d, @~[@"a12", @"b34/c/d"]);
+        check_path(router, GET, "lalala", z, @~[]);
     }
 }

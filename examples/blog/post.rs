@@ -53,7 +53,7 @@ class _post {
         self.model.delete()
     }
 
-    fn find_comments() -> [comment::comment] {
+    fn find_comments() -> ~[comment::comment] {
         comment::find_by_post(self.model.es, self.model._id)
     }
 }
@@ -65,24 +65,24 @@ fn post(es: client, id: @str) -> post {
 }
 
 fn find(es: client, id: @str) -> option<post> {
-    model::find(es, @"blog", @"post", id).map { |model| _post(model) }
+    model::find(es, @"blog", @"post", id).map(|model| _post(model))
 }
 
-fn all(es: client) -> [post] {
-    model::all(es, @"blog", @"post").map { |model| _post(model) }
+fn all(es: client) -> ~[post] {
+    model::all(es, @"blog", @"post").map(|model| _post(model))
 }
 
-fn find_by_user(es: client, user_id: @str) -> [post] {
-    model::search(es) { |bld|
+fn find_by_user(es: client, user_id: @str) -> ~[post] {
+    do model::search(es) |bld| {
         bld
-            .set_indices(["blog"])
-            .set_types(["post"])
+            .set_indices(~["blog"])
+            .set_types(~["post"])
             .set_source(*json_dict_builder()
-                .insert_dict("filter") { |bld|
-                    bld.insert_dict("term") { |bld|
+                .insert_dict("filter", |bld| {
+                    bld.insert_dict("term", |bld| {
                         bld.insert("user_id", copy user_id);
-                    };
-                }
+                    });
+                })
             );
-    }.map { |model| _post(model) }
+    }.map(|model| _post(model))
 }

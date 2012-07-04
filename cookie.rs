@@ -87,7 +87,7 @@ impl cookie for cookie {
     }
 }
 
-fn parse_header(header: str) -> result<@[cookie], str> {
+fn parse_header(header: str) -> result<@~[cookie], str> {
     let header = header.trim();
 
     // Exit early if empty.
@@ -95,7 +95,7 @@ fn parse_header(header: str) -> result<@[cookie], str> {
 
     let cookies = dvec();
 
-    for header.split_char(';').each { |line|
+    for header.split_char(';').each |line| {
         let parts = str::splitn_char(line, '=', 1u);
 
         let (name, value) = if parts.len() == 1u {
@@ -121,10 +121,10 @@ fn parse_header(header: str) -> result<@[cookie], str> {
 fn parse_headers(headers: @dvec<@str>) -> result<hashmap<str, cookie>, str> {
     let mut cookies = str_hash();
 
-    for (*headers).each { |header|
+    for (*headers).each |header| {
         alt parse_header(*header) {
           ok(cs) {
-            for (*cs).each { |cookie|
+            for (*cs).each |cookie| {
                 cookies.insert(copy *cookie.name, cookie);
             }
           }
@@ -193,7 +193,7 @@ mod cookie_parser {
     }
 
     fn is_path(path: @str) -> bool {
-        for (*path).each_char { |ch|
+        for (*path).each_char |ch| {
             if !char::is_ascii(ch) || http_parser::is_ctl(ch) || ch == ';' {
                 ret false;
             }
@@ -233,7 +233,7 @@ mod http_parser {
     fn is_token(token: str) -> bool {
         if token.len() == 0u { ret false; }
 
-        for token.each_char { |ch|
+        for token.each_char |ch| {
             if !is_char(ch) || is_ctl(ch) || is_separator(ch) {
                 ret false;
             }

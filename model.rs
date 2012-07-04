@@ -23,7 +23,7 @@ impl of to_str::to_str for error {
 }
 
 impl of to_bytes for error {
-    fn to_bytes() -> [u8] { self.to_str().to_bytes() }
+    fn to_bytes() -> ~[u8] { self.to_str().to_bytes() }
 }
 
 type model = @{
@@ -53,11 +53,11 @@ fn hit_to_model(es: client, hit: hashmap<str, json::json>) -> model {
     let typ = alt check hit.get("_type") { json::string(s) { s } };
     let id = alt check hit.get("_id") { json::string(s) { s } };
 
-    let parent = hit.find("_parent").chain { |s|
+    let parent = do hit.find("_parent").chain |s| {
         alt check s { json::string(s) { some(s) } }
     };
 
-    let version = hit.find("_version").chain { |v|
+    let version = do hit.find("_version").chain |v| {
         alt check v { json::num(n) { some(n as uint) } }
     };
 
@@ -92,7 +92,7 @@ fn find(es: client, index: @str, typ: @str, id: @str) -> option<model> {
     }
 }
 
-fn search(es: client, f: fn(search_builder)) -> [model] {
+fn search(es: client, f: fn(search_builder)) -> ~[model] {
     let bld = es.prepare_search();
     f(bld);
 
@@ -109,7 +109,7 @@ fn search(es: client, f: fn(search_builder)) -> [model] {
           json::dict(hits) {
             alt check hits.get("hits") {
               json::list(hits) {
-                  (*hits).map { |hit|
+                  do (*hits).map |hit| {
                       alt check hit {
                         json::dict(hit) { hit_to_model(es, hit) }
                       }
@@ -122,15 +122,15 @@ fn search(es: client, f: fn(search_builder)) -> [model] {
     }
 }
 
-fn all(es: client, index: @str, typ: @str) -> [model] {
-    search(es) { |bld|
+fn all(es: client, index: @str, typ: @str) -> ~[model] {
+    do search(es) |bld| {
         bld
-            .set_indices([copy *index])
-            .set_types([copy *typ])
+            .set_indices(~[copy *index])
+            .set_types(~[copy *typ])
             .set_source(*json_dict_builder()
-                .insert_dict("query") { |bld|
-                    bld.insert_dict("match_all") { |_bld| };
-                }
+                .insert_dict("query", |bld| {
+                    bld.insert_dict("match_all", |_bld| { });
+                })
             );
     }
 }
@@ -148,7 +148,7 @@ impl model for model {
     }
 
     fn find_bool(+key: str) -> option<bool> {
-        self.source.find(key).chain { |value|
+        do self.source.find(key).chain |value| {
             alt value {
               json::boolean(value) { some(value) }
               _ { none }
@@ -161,7 +161,7 @@ impl model for model {
     }
 
     fn find_str(+key: str) -> option<@str> {
-        self.source.find(key).chain { |value|
+        do self.source.find(key).chain |value| {
             alt value {
               json::string(value) { some(value) }
               _ { none }
@@ -181,7 +181,7 @@ impl model for model {
     }
 
     fn find_float(+key: str) -> option<float> {
-        self.source.find(key).chain { |value|
+        do self.source.find(key).chain |value| {
             alt value {
               json::num(value) { some(value) }
               _ { none }
@@ -201,7 +201,7 @@ impl model for model {
     }
 
     fn find_uint(+key: str) -> option<uint> {
-        self.find_float(key).map { |value| value as uint }
+        self.find_float(key).map(|value| value as uint)
     }
 
     fn get_uint(+key: str) -> uint {
@@ -213,7 +213,7 @@ impl model for model {
     }
 
     fn find_int(+key: str) -> option<int> {
-        self.find_float(key).map { |value| value as int }
+        self.find_float(key).map(|value| value as int)
     }
 
     fn get_int(+key: str) -> int {
@@ -232,8 +232,8 @@ impl model for model {
 
         if *self._id != "" { index.set_id(copy *self._id); }
 
-        (copy self._parent).iter { |p| index.set_parent(copy *p); }
-        (copy self._version).iter { |v| index.set_version(v); }
+        (copy self._parent).iter(|p| { index.set_parent(copy *p); });
+        (copy self._version).iter(|v| { index.set_version(v); });
 
         let rep = index.execute();
 

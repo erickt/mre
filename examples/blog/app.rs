@@ -27,23 +27,24 @@ fn app() -> app {
 
     // Create our middleware. We'll use the session middleware so we can
     // automatically log a user in based off a session cookie.
-    let middleware = [
+    let middleware = ~[
         mre::middleware::logger(io::stdout()),
         mre::middleware::session(es,
             @"blog",
             @"blog",
-            @"session"
-        ) { |req: @request<data>, session, user|
-            req.data.session = some(session);
-            req.data.user = some(user);
-        }
+            @"session",
+            |req: @request<data>, session, user| {
+               req.data.session = some(session);
+                req.data.user = some(user);
+            }
+        )
     ];
 
     // 
     let mre = mre::mre(zmq,
         some("F0D32575-2ABB-4957-BC8B-12DAC8AFF13A"),
-        ["tcp://127.0.0.1:9998"],
-        ["tcp://127.0.0.1:9999"],
+        ~["tcp://127.0.0.1:9998"],
+        ~["tcp://127.0.0.1:9999"],
         middleware,
         { || @{ mut session: none, mut user: none } });
 

@@ -55,9 +55,9 @@ fn user(es: client, hasher: hasher, index: @str,
 }
 
 fn find(es: client, index: @str, id: @str) -> option<user> {
-    model::find(es, index, @"user", id).map { |model| _user(model) }
+    model::find(es, index, @"user", id).map(|model| _user(model))
 }
 
-fn all(es: client, index: @str) -> [user] {
-    model::all(es, index, @"user").map { |model| _user(model) }
+fn all(es: client, index: @str) -> ~[user] {
+    model::all(es, index, @"user").map(|model| _user(model))
 }

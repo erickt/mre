@@ -55,7 +55,7 @@ fn comment(es: client, post_id: @str, id: @str) -> comment {
 }
 
 fn find(es: client, post_id: @str, id: @str) -> option<comment> {
-    model::find(es, @"blog", @"comment", id).map { |model|
+    do model::find(es, @"blog", @"comment", id).map |model| {
         // Searching doesn't include the parent link, so manually add it
         // back.
         model._parent = some(post_id);
@@ -63,31 +63,31 @@ fn find(es: client, post_id: @str, id: @str) -> option<comment> {
     }
 }
 
-fn find_by_post(es: client, post_id: @str) -> [comment] {
-    model::search(es) { |bld|
+fn find_by_post(es: client, post_id: @str) -> ~[comment] {
+    do model::search(es) |bld| {
         bld
-            .set_indices(["blog"])
-            .set_types(["comment"])
+            .set_indices(~["blog"])
+            .set_types(~["comment"])
             .set_source(*json_dict_builder()
-                .insert_dict("filter") { |bld|
-                    bld.insert_dict("term") { |bld|
+                .insert_dict("filter", |bld| {
+                    bld.insert_dict("term", |bld| {
                         bld.insert("_parent", post_id);
-                    };
-                }
+                    });
+                })
             );
-    }.map { |model|
+    }.map(|model| {
         model._parent = some(post_id);
         _comment(model)
-    }
+    })
 }
 
 fn delete_by_post(es: client, post_id: @str) {
     es.prepare_delete_by_query()
-        .set_indices(["blog"])
-        .set_types(["comment"])
+        .set_indices(~["blog"])
+        .set_types(~["comment"])
         .set_source(*json_dict_builder()
-            .insert_dict("term") { |bld|
+            .insert_dict("term", |bld| {
                 bld.insert("_parent", post_id);
-            }
+            })
         ).execute();
 }

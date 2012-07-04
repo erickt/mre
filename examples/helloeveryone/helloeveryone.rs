@@ -8,42 +8,42 @@ fn main() {
         err(e) { fail e.to_str() }
     };
 
-    let mre = mre::mre::<()>(
+    let mre = mre::mre(
         zmq,
 
         // Generate a new UUID each time we start.
         none,
 
         // The addresses to receive requests from.
-        ["tcp://127.0.0.1:9994"],
+        ~["tcp://127.0.0.1:9994"],
 
         // The addresses to send responses to.
-        ["tcp://127.0.0.1:9995"],
+        ~["tcp://127.0.0.1:9995"],
 
         // Create our middleware, which preproceses requests and
         // responses. For now we'll just use the logger.
-        [mre::middleware::logger(io::stdout())],
+        ~[mre::middleware::logger(io::stdout())],
 
         // A function to create per-request data. This can be used by
         // middleware like middleware::session to automatically look
         // up the current user and session data in the database. We don't
         // need it for this example, so just return a unit value.
-        { || () }
+        || { () }
     );
 
     // Connect to Elasticsearch, which we'll use as our database.
     let es = elasticsearch::connect_with_zmq(zmq, "tcp://localhost:9700");
 
     // Show who we'll say hello to.
-    mre.get("^/$") { |_req, rep, _m|
+    do mre.get("^/$") |_req, rep, _m| {
         // Fetch the people we've greeted.
         let people = person::last_50(es);
 
         // We want to render out our responses using mustache, so we need
         // to convert our model over to something mustache can handle.
-        let template = mustache::render_file("index", hash_from_strs([
-            ("names", people.map { |person|
-                hash_from_strs([
+        let template = mustache::render_file("index", hash_from_strs(~[
+            ("names", do people.map |person| {
+                hash_from_strs(~[
                     ("name", person.name())
                 ])
             }.to_mustache())
@@ -53,7 +53,7 @@ fn main() {
     }
 
     // Add a new person to greet.
-    mre.post("^/$") { |req, rep, _m|
+    do mre.post("^/$") |req, rep, _m| {
         // Parse the form data.
         let form = uri::decode_form_urlencoded(*req.body());
 

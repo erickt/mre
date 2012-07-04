@@ -19,7 +19,7 @@ enum method {
 type accept = {
     mime_type: (@str, @str),
     quality: float,
-    options: @[@str],
+    options: @~[@str],
 };
 
 type request<T> = {
@@ -27,7 +27,7 @@ type request<T> = {
     method: method,
     cookies: hashmap<str, cookie::cookie>,
     mut data: T,
-    mut _accepts: option<[accept]>,
+    mut _accepts: option<~[accept]>,
 };
 
 fn request<T: copy>(req: @mongrel2::request, rep: @response, data: T)
@@ -90,8 +90,8 @@ fn parse_mime_type(mime_type: str) -> (@str, @str) {
 }
 
 #[doc = ""]
-fn parse_accept_header(header: str) -> [accept] {
-    let accepts = header.split_char(',').map { |e|
+fn parse_accept_header(header: str) -> ~[accept] {
+    let accepts = do header.split_char(',').map |e| {
         let parts = str::replace(e, " ", "").split_char(';');
 
         let mime_type = parse_mime_type(parts[0]);
@@ -99,7 +99,7 @@ fn parse_accept_header(header: str) -> [accept] {
         let mut options = dvec();
 
         if parts.len() > 1u {
-            vec::iter_between(parts, 1u, parts.len()) { |option|
+            do vec::iter_between(parts, 1u, parts.len()) |option| {
                 if option.starts_with("q=") {
                     let q = option.substr(2u, option.len() - 2u);
                     alt float::from_str(q) {
@@ -120,11 +120,11 @@ fn parse_accept_header(header: str) -> [accept] {
     };
 
     // Sort by quality, with highest quality first.
-    sort::merge_sort({ |e1, e2| e1.quality >= e2.quality }, accepts)
+    sort::merge_sort(|e1, e2| e1.quality >= e2.quality, accepts)
 }
 
 impl request<T: copy> for @request<T> {
-    fn body() -> @[u8] {
+    fn body() -> @~[u8] {
         self.req.body
     }
 
@@ -158,17 +158,17 @@ impl request<T: copy> for @request<T> {
         self.find_header("content-type")
     }
 
-    fn accepts() -> [accept] {
+    fn accepts() -> ~[accept] {
         // Lazily parse the accept header.
         alt self._accepts {
           none {
             let accepts = alt self.find_header("accept") {
               none {
                 // If we don't have the header, assume we accept everything.
-                [{
+                ~[{
                     mime_type: (@"*", @"*"),
                     quality: 1.0,
-                    options: @[]
+                    options: @~[]
                 }]
               }
               some(accept) { parse_accept_header(*accept) }
@@ -185,7 +185,7 @@ impl request<T: copy> for @request<T> {
     fn accept(mime_type: str) -> bool {
         let (typ, subtyp) = parse_mime_type(mime_type);
 
-        for self.accepts().each { |accept|
+        for self.accepts().each |accept| {
             let (t, s) = accept.mime_type;
 
             if
@@ -198,8 +198,8 @@ impl request<T: copy> for @request<T> {
         false
     }
 
-    fn negotiate_media_types<U: copy>(mime_types: [(str, U)]) -> option<U> {
-        let mime_types = mime_types.map { |t_v|
+    fn negotiate_media_types<U: copy>(mime_types: ~[(str, U)]) -> option<U> {
+        let mime_types = do mime_types.map |t_v| {
             alt t_v {
               (t, v) {
                 alt parse_mime_type(t) {
@@ -211,10 +211,10 @@ impl request<T: copy> for @request<T> {
 
         // Walk over the accepts in order and return the first item that
         // matches.
-        for self.accepts().each { |accept|
+        for self.accepts().each |accept| {
             alt accept.mime_type {
               (typ, subtyp) {
-                for mime_types.each { |t_s_v|
+                for mime_types.each |t_s_v| {
                     alt t_s_v {
                       (t, s, v) {
                         if
@@ -242,26 +242,26 @@ mod tests {
                       "application/xml;q=0.9," +
                       "*/*;q=0.8";
 
-        assert parse_accept_header(firefox) == [
+        assert parse_accept_header(firefox) == ~[
             {
-                mime_type: ("text", "html"),
+                mime_type: (@"text", @"html"),
                 quality: 1.0,
-                options: []
+                options: @~[]
             },
             {
-                mime_type: ("application", "xhtml+xml"),
+                mime_type: (@"application", @"xhtml+xml"),
                 quality: 1.0,
-                options: []
+                options: @~[]
             },
             {
-                mime_type: ("application", "xml"),
+                mime_type: (@"application", @"xml"),
                 quality: 0.9,
-                options: []
+                options: @~[]
             },
             {
-                mime_type: ("*", "*"),
+                mime_type: (@"*", @"*"),
                 quality: 0.8,
-                options: []
+                options: @~[]
             }
         ];
     }
@@ -275,36 +275,36 @@ mod tests {
                      "image/png," +
                      "*/*;q=0.5";
 
-        assert parse_accept_header(webkit) == [
+        assert parse_accept_header(webkit) == ~[
             {
-                mime_type: ("application", "xml"),
+                mime_type: (@"application", @"xml"),
                 quality: 1.0,
-                options: []
+                options: @~[]
             },
             {
-                mime_type: ("application", "xhtml+xml"),
+                mime_type: (@"application", @"xhtml+xml"),
                 quality: 1.0,
-                options: []
+                options: @~[]
             },
             {
-                mime_type: ("image", "png"),
+                mime_type: (@"image", @"png"),
                 quality: 1.0,
-                options: []
+                options: @~[]
             },
             {
-                mime_type: ("text", "html"),
+                mime_type: (@"text", @"html"),
                 quality: 0.9,
-                options: []
+                options: @~[]
             },
             {
-                mime_type: ("text", "plain"),
+                mime_type: (@"text", @"plain"),
                 quality: 0.8,
-                options: []
+                options: @~[]
             },
             {
-                mime_type: ("*", "*"),
+                mime_type: (@"*", @"*"),
                 quality: 0.5,
-                options: []
+                options: @~[]
             }
         ];
     }

@@ -10,14 +10,14 @@ fn main() {
         some("E4B7CE14-E7F7-43EE-A3E6-DB7B0A0C106F"),
 
         // The addresses to receive requests from.
-        ["tcp://127.0.0.1:9996"],
+        ~["tcp://127.0.0.1:9996"],
 
         // The addresses to send responses to.
-        ["tcp://127.0.0.1:9997"],
+        ~["tcp://127.0.0.1:9997"],
 
         // Create our middleware, which preproceses requests and
         // responses. For now we'll just use the logger.
-        [mre::middleware::logger(io::stdout())],
+        ~[mre::middleware::logger(io::stdout())],
 
         // A function to create per-request data. This can be used by
         // middleware like middleware::session to automatically look
@@ -27,7 +27,7 @@ fn main() {
     );
 
     // Route our responses.
-    mre.get("^/$") { |_req, rep, _m|
+    do mre.get("^/$") |_req, rep, _m| {
         rep.reply_html(200u,
             "<html>\n" +
             "<body>\n" +

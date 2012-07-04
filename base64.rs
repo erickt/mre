@@ -5,7 +5,7 @@ iface to_base64 {
     fn to_base64() -> str;
 }
 
-impl of to_base64 for [u8] {
+impl of to_base64 for ~[u8] {
     fn to_base64() -> str {
         let chars = str::chars("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
 
@@ -58,11 +58,11 @@ impl of to_base64 for str {
 }
 
 iface from_base64 {
-    fn from_base64() -> [u8];
+    fn from_base64() -> ~[u8];
 }
 
-impl of from_base64 for [u8] {
-    fn from_base64() -> [u8] {
+impl of from_base64 for ~[u8] {
+    fn from_base64() -> ~[u8] {
         if self.len() % 4u != 0u { fail "invalid base64 length"; }
 
         let len = self.len();
@@ -73,14 +73,14 @@ impl of from_base64 for [u8] {
             if self[len - 2u] == '=' as u8 { padding += 1u; }
         }
 
-        let mut r = [];
+        let mut r = ~[];
         vec::reserve(r, (len / 4u) * 3u - padding);
 
         let mut i = 0u;
         while i < len {
             let mut n = 0u;
 
-            for uint::iterate(0u, 4u) { |_i|
+            for iter::repeat(4u) {
                 let ch = self[i] as char;
                 n <<= 6u;
 
@@ -126,7 +126,7 @@ impl of from_base64 for [u8] {
 }
 
 impl of from_base64 for str {
-    fn from_base64() -> [u8] {
+    fn from_base64() -> ~[u8] {
         str::bytes(self).from_base64()
     }
 }

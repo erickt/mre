@@ -13,7 +13,7 @@ import to_bytes::to_bytes;
 type mre<T: copy> = @{
     m2: mongrel2::connection,
     router: router::router<T>,
-    middleware: [middleware<T>],
+    middleware: ~[middleware<T>],
     data: fn@() -> T,
 };
 
@@ -22,9 +22,9 @@ Helper function to abstract away some of the boilerplate code.
 "]
 fn mre<T: copy>(zmq: zmq::context,
                 +sender_id: option<str>,
-                +req_addrs: [str],
-                +rep_addrs: [str],
-                middleware: [middleware<T>],
+                +req_addrs: ~[str],
+                +rep_addrs: ~[str],
+                middleware: ~[middleware<T>],
                 data: fn@() -> T) -> mre<T> {  
     @{
         m2: mongrel2::connect(zmq, sender_id, req_addrs, rep_addrs),

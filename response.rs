@@ -7,7 +7,7 @@ type response = {
     mut code: uint,
     mut status: @str,
     headers: @header_map,
-    mut reply: fn@(@[u8]),
+    mut reply: fn@(@~[u8]),
     mut end: fn@(),
 };
 
@@ -16,8 +16,8 @@ fn response(m2: mongrel2::connection, req: @mongrel2::request) -> @response {
         mut code: 200u,
         mut status: @"OK",
         headers: @str_hash(),
-        mut reply: { |msg: @[u8]| m2.reply(req, *msg); },
-        mut end: { || m2.reply(req, str::bytes("")); },
+        mut reply: |msg: @~[u8]| { m2.reply(req, *msg); },
+        mut end: || { m2.reply(req, str::bytes("")); },
     }
 }
 
@@ -91,7 +91,7 @@ impl response for @response {
     }
 
     fn find_header(key: str) -> option<@str> {
-        self.find_headers(key).chain { |values|
+        do self.find_headers(key).chain |values| {
             if (*values).len() == 0u {
                 none
             } else {
@@ -144,8 +144,8 @@ impl response for @response {
                                      self.code,
                                      *self.status)));
 
-        for (*self.headers).each { |key, values|
-            for (*values).each { |value|
+        for (*self.headers).each |key, values| {
+            for (*values).each |value| {
                 rep.push_all(str::bytes(key + ": " + *value + "\r\n"));
             }
         }

@@ -3,9 +3,9 @@ import response::response;
 
 type middleware<T: copy> = fn@(@request<T>, @response) -> bool;
 
-impl middleware<T: copy> for [middleware<T>] {
+impl middleware<T: copy> for ~[middleware<T>] {
     fn wrap(req: @request<T>, rep: @response) -> bool {
-        for self.each { |middleware|
+        for self.each |middleware| {
             // Exit early if the middleware has handled the request.
             if !middleware(req, rep) { ret false; }
         }
@@ -15,9 +15,9 @@ impl middleware<T: copy> for [middleware<T>] {
 }
 
 fn logger<T: copy>(logger: io::writer) -> middleware<T> {
-    { |req: @request<T>, rep: @response|
+    |req: @request<T>, rep: @response| {
         let old_end = rep.end;
-        rep.end = { ||
+        rep.end = || {
             let address = alt req.find_header("x-forwarded-for") {
               none { @"-" }
               some(address) { address }
@@ -55,7 +55,7 @@ fn session<T: copy>(es: elasticsearch::client,
                     cookie_name: @str,
                     f: fn@(@request<T>, session::session, user::user))
   -> middleware<T> {
-    { |req: @request<T>, rep: @response|
+    |req: @request<T>, rep: @response| {
         alt req.cookies.find(*cookie_name) {
           none { }
           some(cookie) {

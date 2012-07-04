@@ -11,8 +11,8 @@ fn password(hasher: hasher, password: @str) -> str {
 
 iface hasher {
     fn algorithm() -> str;
-    fn salt() -> [u8];
-    fn encode(pass: @str, salt: @[u8]) -> str;
+    fn salt() -> ~[u8];
+    fn encode(pass: @str, salt: @~[u8]) -> str;
     fn verify(pass: @str, encoded: @str) -> bool;
 }
 
@@ -32,15 +32,15 @@ fn default_pbkdf2_sha1() -> hasher {
 impl of hasher for pbkdf2_sha1 {
     fn algorithm() -> str { "pbkdf2_sha1" }
 
-    fn salt() -> [u8] {
+    fn salt() -> ~[u8] {
         crypto::rand::rand_bytes(self.keylen)
     }
 
-    fn encode(pass: @str, salt: @[u8]) -> str {
+    fn encode(pass: @str, salt: @~[u8]) -> str {
         self.encode_iterations(*pass, *salt, self.iterations)
     }
 
-    fn encode_iterations(pass: str, salt: [u8], iterations: uint) -> str {
+    fn encode_iterations(pass: str, salt: ~[u8], iterations: uint) -> str {
         let hash = crypto::pkcs5::pbkdf2_hmac_sha1(pass, salt,
                                                    iterations,
                                                    self.keylen);
@@ -64,7 +64,7 @@ impl of hasher for pbkdf2_sha1 {
     }
 }
 
-fn constant_time_compare_vec(v1: [u8], v2: [u8]) -> bool {
+fn constant_time_compare_vec(v1: ~[u8], v2: ~[u8]) -> bool {
     let len = v1.len();
     if len != v2.len() { ret false; }
 
@@ -79,8 +79,8 @@ fn constant_time_compare_vec(v1: [u8], v2: [u8]) -> bool {
 }
 
 fn constant_time_compare_str(s1: str, s2: str) -> bool {
-    str::as_bytes(s1) { |s1_buf|
-        str::as_bytes(s2) { |s2_buf|
+    do str::as_bytes(s1) |s1_buf| {
+        do str::as_bytes(s2) |s2_buf| {
             constant_time_compare_vec(s1_buf, s2_buf)
         }
     }
@@ -91,11 +91,11 @@ mod tests {
     #[test]
     fn test() {
         let hasher = pbkdf2_sha1(4096u, 20u);
-        let encoded = hasher.encode("password", str::bytes("salt"));
+        let encoded = hasher.encode(@"password", @str::bytes("salt"));
 
         assert encoded ==
             "pbkdf2_sha1$4096$c2FsdA==$SwB5AbdlSJq+rUnZJvch0GWkKcE=";
 
-        assert hasher.verify("password", encoded);
+        assert hasher.verify(@"password", @encoded);
     }
 }

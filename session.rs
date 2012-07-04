@@ -41,5 +41,5 @@ fn session(es: client, index: @str, user_id: @str) -> session {
 }
 
 fn find(es: client, index: @str, id: @str) -> option<session> {
-    model::find(es, index, @"session", id).map { |model| _session(model) }
+    model::find(es, index, @"session", id).map(|model| _session(model))
 }
