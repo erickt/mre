@@ -7,7 +7,9 @@ iface to_base64 {
 
 impl of to_base64 for ~[u8] {
     fn to_base64() -> str {
-        let chars = str::chars("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
+        let chars = str::chars(
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+        );
 
         let len = self.len();
         let mut s = "";

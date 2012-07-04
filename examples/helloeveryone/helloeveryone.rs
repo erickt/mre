@@ -28,7 +28,7 @@ fn main() {
         // middleware like middleware::session to automatically look
         // up the current user and session data in the database. We don't
         // need it for this example, so just return a unit value.
-        || { () }
+        || ()
     );
 
     // Connect to Elasticsearch, which we'll use as our database.
