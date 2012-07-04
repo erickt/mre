@@ -2,3 +2,4 @@
 libmre*.dylib
 *.dSYM/
 mre
+.cargo

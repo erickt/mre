@@ -16,11 +16,11 @@ example-blog: all
 	rustc -L . examples/blog/blog.rc
 
 deps:
-	cargo install -g mongrel2
-	cargo install -g elasticsearch
-	cargo install -g mustache
-	cargo install -g pcre
-	cargo install -g crypto
+	cargo install mongrel2
+	cargo install elasticsearch
+	cargo install mustache
+	cargo install pcre
+	cargo install crypto
 
 clean:
 	rm -rf mre *.so *.dylib *.dSYM
