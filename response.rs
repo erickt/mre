@@ -1,5 +1,4 @@
 import cookie::cookie;
-import to_bytes::to_bytes;
 
 type header_map = hashmap<str, @dvec<@str>>;
 

@@ -8,6 +8,7 @@ use uri;
 // Import some common things into the global namespace.
 import result::{result, ok, err};
 import dvec::{dvec, extensions};
+import to_bytes::to_bytes;
 import std::map::{hashmap, hash_from_strs};
 import std::json::to_json;
 
@@ -15,7 +16,6 @@ import zmq::to_str;
 import mre::mre;
 import mre::request::request;
 import mre::response::response;
-import mre::to_bytes::to_bytes;
 import mre::model;
 import elasticsearch::{
     client,

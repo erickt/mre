@@ -1,4 +1,3 @@
-import base64::to_base64;
 import elasticsearch::client;
 import model::{model, error};
 

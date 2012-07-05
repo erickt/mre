@@ -1,5 +1,3 @@
-import base64::{to_base64, from_base64};
-
 export password;
 export hasher;
 export pbkdf2_sha1;

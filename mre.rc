@@ -12,7 +12,6 @@ use crypto;
 use elasticsearch;
 
 mod auth;
-mod base64;
 mod cookie;
 mod middleware;
 mod model;
@@ -21,12 +20,13 @@ mod response;
 mod router;
 mod session;
 mod user;
-mod to_bytes;
 
 import dvec::{dvec, extensions};
 import io::{reader, reader_util, writer, writer_util};
 import result::{result, ok, err};
+import to_bytes::to_bytes;
 
 import std::map::{hashmap, str_hash};
 import std::json;
 import std::json::{json, to_json};
+import std::base64::{to_base64, from_base64};
