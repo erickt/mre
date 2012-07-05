@@ -8,14 +8,6 @@ Installation
 
 Install for users of MRE:
 
-    % cargo install zmq
-    % cargo install tnetstring
-    % cargo install mongrel2
-    % cargo install uri
-    % cargo install elasticsearch
-    % cargo install mustache
-    % cargo install pcre
-    % cargo install git://github.com/erickt/rustcrypto.git
     % cargo install mre
 
 Install for developers:
@@ -28,8 +20,8 @@ Install for developers:
     % If you want to run the tests
     % make test && ./mre
 
-Running the Hello World App
----------------------------
+Running the Examples
+--------------------
 
 First, make sure [Mongrel2 is
 installed](http://mongrel2.org/wiki/quick_start.html). Next, initialize
@@ -39,27 +31,28 @@ and start Mongrel2:
     % m2sh load --db config.sqlite --config mongrel2.conf
     % m2sh start -host localhost
 
-In another shell, build and run the example:
+In another shell, build and run the `Hello World` example:
 
     % make example-helloworld
     % cd ./examples/helloworld && ./helloworld
 
-Running the Blog App
---------------------
+The `Hello Everyone` example needs a little more setup before it can run. It
+uses Elasticsearch, so follow these
+[instructions](https://github.com/erickt/rust-elasticsearch) to get ES running.
+Then, create the example's index:
 
-First off, you'll need to follow the installation and setup instructions
-for [rust-elasticsearch](https://github.com/erickt/rust-elasticsearch).
-Once that is running, initialize and start up Mongrel2 just like before:
+    % ./examples/helloeveryone/create-index
 
-    % cd examples/blog
+Start up Mongrel2:
+
+    % cd examples/helloeveryone
     % m2sh load --db config.sqlite --config mongrel2.conf
     % m2sh start -host localhost
 
-In another shell, create the Elasticsearch index:
+And in a separate shell, build and run the example:
 
-    % ./examples/blog/create-index
+    % make example-helloeveryone
+    % cd examples/helloeveryone && ./helloeveryone
 
-Finally, build and run the blog:
-
-    % make example-blog
-    % cd examples/blog && ./blog
+The `Blog` example is built the same way, just replace `helloeveryone` with
+`blog`.
