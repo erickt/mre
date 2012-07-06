@@ -39,7 +39,14 @@ impl mre<T: copy> for mre<T> {
             self.m2.rep_addrs()));
 
         loop {
-            let m2_req = self.m2.recv();
+            let m2_req = alt self.m2.recv() {
+              ok(req) { req }
+              err(e) {
+                // Ignore invalid mongrel2 messages.
+                io::println(#fmt("warning: mongrel2 error: %s", *e));
+                cont;
+              }
+            };
 
             // Ignore close requests for now.
             if m2_req.is_disconnect() { cont; }

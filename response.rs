@@ -6,8 +6,8 @@ type response = {
     mut code: uint,
     mut status: @str,
     headers: @header_map,
-    mut reply: fn@(@~[u8]),
-    mut end: fn@(),
+    mut reply: fn@(@~[u8]) -> result<(), @str>,
+    mut end: fn@() -> result<(), @str>,
 };
 
 fn response(m2: mongrel2::connection, req: @mongrel2::request) -> @response {
@@ -15,8 +15,8 @@ fn response(m2: mongrel2::connection, req: @mongrel2::request) -> @response {
         mut code: 200u,
         mut status: @"OK",
         headers: @str_hash(),
-        mut reply: |msg: @~[u8]| { m2.reply(req, *msg); },
-        mut end: || { m2.reply(req, str::bytes("")); },
+        mut reply: |msg: @~[u8]| { m2.reply(req, *msg) },
+        mut end: || { m2.reply(req, str::bytes("")) },
     }
 }
 

@@ -42,7 +42,7 @@ fn logger<T: copy>(logger: io::writer) -> middleware<T> {
                 rep.code,
                 *len));
 
-            old_end();
+            old_end()
         };
 
         true
