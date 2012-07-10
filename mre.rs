@@ -44,19 +44,19 @@ impl mre<T: copy> for mre<T> {
               err(e) {
                 // Ignore invalid mongrel2 messages.
                 io::println(#fmt("warning: mongrel2 error: %s", *e));
-                cont;
+                again;
               }
             };
 
             // Ignore close requests for now.
-            if m2_req.is_disconnect() { cont; }
+            if m2_req.is_disconnect() { again; }
 
             let rep = response::response(self.m2, m2_req);
 
             let req = alt request::request(m2_req, rep, self.data()) {
               none {
                 // Ignore this request if it's malformed.
-                cont;
+                again;
               }
               some(req) { req }
             };

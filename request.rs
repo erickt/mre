@@ -4,6 +4,16 @@ export method;
 export accept;
 export request;
 
+export HEAD;
+export GET;
+export POST;
+export PUT;
+export DELETE;
+export TRACE;
+export OPTIONS;
+export CONNECT;
+export PATCH;
+
 enum method {
     HEAD,
     GET,
