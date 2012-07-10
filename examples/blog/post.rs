@@ -65,15 +65,15 @@ fn post(es: client, id: @str) -> post {
 }
 
 fn find(es: client, id: @str) -> option<post> {
-    model::find(es, @"blog", @"post", id).map(|model| _post(model))
+    mre::model::find(es, @"blog", @"post", id).map(|model| _post(model))
 }
 
 fn all(es: client) -> ~[post] {
-    model::all(es, @"blog", @"post").map(|model| _post(model))
+    mre::model::all(es, @"blog", @"post").map(|model| _post(model))
 }
 
 fn find_by_user(es: client, user_id: @str) -> ~[post] {
-    do model::search(es) |bld| {
+    do mre::model::search(es) |bld| {
         bld
             .set_indices(~["blog"])
             .set_types(~["post"])

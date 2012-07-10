@@ -55,7 +55,7 @@ fn comment(es: client, post_id: @str, id: @str) -> comment {
 }
 
 fn find(es: client, post_id: @str, id: @str) -> option<comment> {
-    do model::find(es, @"blog", @"comment", id).map |model| {
+    do mre::model::find(es, @"blog", @"comment", id).map |model| {
         // Searching doesn't include the parent link, so manually add it
         // back.
         model._parent = some(post_id);
@@ -64,7 +64,7 @@ fn find(es: client, post_id: @str, id: @str) -> option<comment> {
 }
 
 fn find_by_post(es: client, post_id: @str) -> ~[comment] {
-    do model::search(es) |bld| {
+    do mre::model::search(es) |bld| {
         bld
             .set_indices(~["blog"])
             .set_types(~["comment"])

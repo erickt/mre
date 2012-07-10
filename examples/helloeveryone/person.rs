@@ -72,7 +72,7 @@ fn last_50(es: client) -> ~[person] {
     // This query can be a little complicated for those who have never used
     // elasticsearch. All it says is that we want to fetch 50 documents on the
     // index "helloeveryone" and the type "person", sorted by time.
-    do model::search(es) |bld| {
+    do mre::model::search(es) |bld| {
         bld
             .set_indices(~["helloeveryone"])
             .set_types(~["person"])
