@@ -1,19 +1,16 @@
-import std::json::json;
-import elasticsearch::client;
-import model::{model, error};
-import auth::hasher;
+use elasticsearch::Client;
+use model::{model, error};
+use auth::hasher;
 
 export user;
 export find;
 export all;
 
-class _user {
-    let model: model;
+pub struct user {
+    model: model,
+}
 
-    new(model: model) {
-        self.model = model;
-    }
-
+impl user {
     fn id() -> @str { self.model._id }
 
     fn password() -> @str {
@@ -29,35 +26,33 @@ class _user {
         hasher.verify(password, self.password())
     }
 
-    fn create() -> result<(), error> {
+    fn create() -> Result<(), error> {
         self.model.create()
     }
 
-    fn save() -> result<(), error> {
+    fn save() -> Result<(), error> {
         self.model.save()
     }
 
     fn delete() {
-        import model::model;
+        use model::model;
         self.model.delete()
     }
 }
 
-type user = _user;
-
-fn user(es: client, hasher: hasher, index: @str,
+pub fn user(es: Client, hasher: hasher, index: @str,
         username: @str, password: @str) -> user {
-    let user = _user(model(es, index, @"user", username));
+    let user = user { model: model(es, index, @"user", username) };
 
     user.set_password(hasher, password);
 
     user
 }
 
-fn find(es: client, index: @str, id: @str) -> option<user> {
-    model::find(es, index, @"user", id).map(|model| _user(model))
+pub fn find(es: Client, index: @str, id: @str) -> Option<user> {
+    model::find(es, index, @"user", id).map(|model| user { model: model })
 }
 
-fn all(es: client, index: @str) -> ~[user] {
-    model::all(es, index, @"user").map(|model| _user(model))
+pub fn all(es: Client, index: @str) -> ~[user] {
+    model::all(es, index, @"user").map(|model| user { model: model })
 }

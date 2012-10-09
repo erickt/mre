@@ -1,33 +1,28 @@
-export password;
-export hasher;
-export pbkdf2_sha1;
-export default_pbkdf2_sha1;
-
-fn password(hasher: hasher, password: @str) -> str {
+pub fn password(hasher: hasher, password: @str) -> str {
     hasher.encode(password, @hasher.salt())
 }
 
-iface hasher {
+pub trait hasher {
     fn algorithm() -> str;
     fn salt() -> ~[u8];
     fn encode(pass: @str, salt: @~[u8]) -> str;
     fn verify(pass: @str, encoded: @str) -> bool;
 }
 
-type pbkdf2_sha1 = {
+pub type pbkdf2_sha1 = {
     iterations: uint,
     keylen: uint
 };
 
-fn pbkdf2_sha1(iterations: uint, keylen: uint) -> hasher {
+pub fn pbkdf2_sha1(iterations: uint, keylen: uint) -> hasher {
     { iterations: iterations, keylen: keylen } as hasher
 }
 
-fn default_pbkdf2_sha1() -> hasher {
+pub fn default_pbkdf2_sha1() -> hasher {
     pbkdf2_sha1(10000u, 20u)
 }
 
-impl of hasher for pbkdf2_sha1 {
+impl pbkdf2_sha1: hasher {
     fn algorithm() -> str { "pbkdf2_sha1" }
 
     fn salt() -> ~[u8] {
@@ -64,7 +59,7 @@ impl of hasher for pbkdf2_sha1 {
 
 fn constant_time_compare_vec(v1: ~[u8], v2: ~[u8]) -> bool {
     let len = v1.len();
-    if len != v2.len() { ret false; }
+    if len != v2.len() { return false; }
 
     let mut i = 0u;
     let mut result = 0_u8;
@@ -89,7 +84,7 @@ mod tests {
     #[test]
     fn test() {
         let hasher = pbkdf2_sha1(4096u, 20u);
-        let encoded = hasher.encode(@"password", @str::bytes("salt"));
+        let encoded = hasher.encode(@"password", @str::to_bytes("salt"));
 
         assert encoded ==
             "pbkdf2_sha1$4096$c2FsdA==$SwB5AbdlSJq+rUnZJvch0GWkKcE=";

@@ -1,15 +1,10 @@
-import std::time;
-import std::time::tm;
-import m2_request = mongrel2::request;
-import zmq::error;
+use router::router;
+use request::request;
+use response::response;
+use middleware::middleware;
 
-import router::router;
-import request::request;
-import response::response;
-import middleware::middleware;
-
-type mre<T: copy> = @{
-    m2: mongrel2::connection,
+type mre<T: Copy> = @{
+    m2: mongrel2::Connection,
     router: router::router<T>,
     middleware: ~[middleware<T>],
     data: fn@() -> T,
@@ -18,8 +13,8 @@ type mre<T: copy> = @{
 #[doc = "
 Helper function to abstract away some of the boilerplate code.
 "]
-fn mre<T: copy>(zmq: zmq::context,
-                +sender_id: option<str>,
+fn mre<T: Copy>(zmq: zmq::Context,
+                +sender_id: Option<str>,
                 +req_addrs: ~[str],
                 +rep_addrs: ~[str],
                 middleware: ~[middleware<T>],
@@ -32,41 +27,41 @@ fn mre<T: copy>(zmq: zmq::context,
     }
 }
 
-impl mre<T: copy> for mre<T> {
+impl<T> mre<T> {
     fn run() {
         io::println(#fmt("Starting up %? -> %?",
             self.m2.req_addrs(),
             self.m2.rep_addrs()));
 
         loop {
-            let m2_req = alt self.m2.recv() {
-              ok(req) { req }
-              err(e) {
-                // Ignore invalid mongrel2 messages.
-                io::println(#fmt("warning: mongrel2 error: %s", *e));
-                again;
-              }
+            let m2_req = match self.m2.recv() {
+                Ok(req) => req,
+                Err(e) => {
+                    // Ignore invalid mongrel2 messages.
+                    io::println(#fmt("warning: mongrel2 error: %s", *e));
+                    loop;
+                }
             };
 
             // Ignore close requests for now.
-            if m2_req.is_disconnect() { again; }
+            if m2_req.is_disconnect() { loop; }
 
             let rep = response::response(self.m2, m2_req);
 
-            let req = alt request::request(m2_req, rep, self.data()) {
-              none {
-                // Ignore this request if it's malformed.
-                again;
-              }
-              some(req) { req }
+            let req = match request::request(m2_req, rep, self.data()) {
+                None => {
+                    // Ignore this request if it's malformed.
+                    loop;
+                }
+                Some(req) => req,
             };
 
             if self.middleware.wrap(req, rep) {
                 // Only run the handler if the middleware hasn't handled
                 // the request.
-                alt self.router.find(req.method, *req.path()) {
-                  none { rep.reply_http(404u, "") }
-                  some((handler, m)) { handler(req, rep, m) }
+                match self.router.find(req.method, *req.path()) {
+                    None => rep.reply_http(404u, ""),
+                    Some((handler, m)) => handler(req, rep, m),
                 };
             }
         }

@@ -1,20 +1,6 @@
-import std::sort;
+use std::sort;
 
-export method;
-export accept;
-export request;
-
-export HEAD;
-export GET;
-export POST;
-export PUT;
-export DELETE;
-export TRACE;
-export OPTIONS;
-export CONNECT;
-export PATCH;
-
-enum method {
+pub enum method {
     HEAD,
     GET,
     POST,
@@ -26,67 +12,67 @@ enum method {
     PATCH
 }
 
-type accept = {
+pub type accept = {
     mime_type: (@str, @str),
     quality: float,
     options: @~[@str],
 };
 
-type request<T> = {
-    req: @mongrel2::request,
+pub type request<T> = {
+    req: @mongrel2::Request,
     method: method,
-    cookies: hashmap<str, cookie::cookie>,
+    cookies: HashMap<str, cookie::cookie>,
     mut data: T,
-    mut _accepts: option<~[accept]>,
+    mut _accepts: Option<~[accept]>,
 };
 
-fn request<T: copy>(req: @mongrel2::request, rep: @response, data: T)
-  -> option<@request<T>> {
-    let method = alt req.headers.find("METHOD") {
-      none {
-        rep.reply_http(400u, "");
-        ret none
-      }
-      some(methods) {
-        assert (*methods).len() == 1u;
+pub fn request<T: Copy>(req: @mongrel2::Request, rep: @response, data: T)
+  -> Option<@request<T>> {
+    let method = match req.headers.find("METHOD") {
+        None => {
+            rep.reply_http(400u, "");
+            return None
+        },
+        Some(methods) => {
+            assert (*methods).len() == 1u;
 
-        alt *(*methods)[0u] {
-          "HEAD" { HEAD }
-          "GET" { GET }
-          "POST" { POST }
-          "PUT" { PUT }
-          "DELETE" { DELETE }
-          "TRACE" { TRACE }
-          "OPTIONS" { OPTIONS }
-          "CONNECT" { CONNECT }
-          "PATCH" { PATCH }
-          _ {
-            rep.reply_http(501u, "");
-            ret none
-          }
+            match *(*methods)[0u] {
+                "HEAD" => HEAD,
+                "GET" => GET,
+                "POST" => POST,
+                "PUT" => PUT,
+                "DELETE" => DELETE,
+                "TRACE" => TRACE,
+                "OPTIONS" => OPTIONS,
+                "CONNECT" => CONNECT,
+                "PATCH" => PATCH,
+                _ => {
+                    rep.reply_http(501u, "");
+                    return None
+                }
+            }
         }
-      }
     };
 
-    let cookies = alt req.headers.find("cookie") {
-      none { str_hash() }
-      some(cookies) {
-        alt cookie::parse_headers(cookies) {
-          ok(cookies) { cookies }
-          err(e) {
-            rep.reply_http(400u, e);
-            ret none
-          }
+    let cookies = match req.headers.find("cookie") {
+        None => HashMap(),
+        Some(cookies) => {
+            match cookie::parse_headers(cookies) {
+                Ok(cookies) => cookies,
+                Err(e) => {
+                    rep.reply_http(400u, e);
+                    return None
+                }
+            }
         }
-      }
     };
 
-    some(@{
+    Some(@{
         req: req,
         method: method,
         cookies: cookies,
         mut data: data,
-        mut _accepts: none,
+        mut _accepts: None,
     })
 }
 
@@ -106,15 +92,15 @@ fn parse_accept_header(header: str) -> ~[accept] {
 
         let mime_type = parse_mime_type(parts[0]);
         let mut quality = 1.0;
-        let mut options = dvec();
+        let mut options = DVec();
 
         if parts.len() > 1u {
-            do vec::iter_between(parts, 1u, parts.len()) |option| {
+            for parts.view(1, parts.len()).each |option| {
                 if option.starts_with("q=") {
                     let q = option.substr(2u, option.len() - 2u);
-                    alt float::from_str(q) {
-                      none { /* Ignore invalid quality values. */ }
-                      some(q) { quality = q; }
+                    match float::from_str(q) {
+                      None => { /* Ignore invalid quality values. */ },
+                      Some(q) => quality = q,
                     }
                 } else {
                     options.push(@copy option);
@@ -133,7 +119,7 @@ fn parse_accept_header(header: str) -> ~[accept] {
     sort::merge_sort(|e1, e2| e1.quality >= e2.quality, accepts)
 }
 
-impl request<T: copy> for @request<T> {
+impl<T> @request<T> {
     fn body() -> @~[u8] {
         self.req.body
     }
@@ -143,52 +129,52 @@ impl request<T: copy> for @request<T> {
     }
 
     fn is_disconnect() -> bool {
-        import mongrel2::request;
         self.req.is_disconnect()
     }
 
-    fn find_headers(key: str) -> option<@dvec<@str>> {
+    fn find_headers(key: str) -> Option<@DVec<@str>> {
         self.req.headers.find(key)
     }
 
-    fn find_header(key: str) -> option<@str> {
-        alt self.find_headers(key) {
-          none { none }
-          some(values) { 
+    fn find_header(key: str) -> Option<@str> {
+        match self.find_headers(key) {
+          None => None,
+          Some(values) => { 
             if (*values).len() == 0u {
-                none
+                None
             } else {
-                some((*values)[0u])
+                Some((*values)[0u])
             }
           }
         }
     }
 
-    fn content_type() -> option<@str> {
+    fn content_type() -> Option<@str> {
         self.find_header("content-type")
     }
 
     fn accepts() -> ~[accept] {
         // Lazily parse the accept header.
-        alt self._accepts {
-          none {
-            let accepts = alt self.find_header("accept") {
-              none {
-                // If we don't have the header, assume we accept everything.
-                ~[{
-                    mime_type: (@"*", @"*"),
-                    quality: 1.0,
-                    options: @~[]
-                }]
-              }
-              some(accept) { parse_accept_header(*accept) }
-            };
+        match self._accepts {
+            None => {
+                let accepts = match self.find_header("accept") {
+                    None => {
+                        // If we don't have the header, assume we accept
+                        // everything.
+                        ~[{
+                            mime_type: (@"*", @"*"),
+                            quality: 1.0,
+                            options: @~[]
+                        }]
+                    }
+                    Some(accept) => parse_accept_header(*accept),
+                };
 
-            self._accepts = some(copy accepts);
+                self._accepts = Some(copy accepts);
 
-            accepts
-          }
-          some(accepts) { copy accepts }
+                accepts
+            }
+            Some(accepts) => copy accepts,
         }
     }
 
@@ -201,19 +187,19 @@ impl request<T: copy> for @request<T> {
             if
               (*typ == "*" || typ == t) &&
               (*subtyp == "*" || subtyp == s) {
-                ret true;
+                return true;
             }
         }
 
         false
     }
 
-    fn negotiate_media_types<U: copy>(mime_types: ~[(str, U)]) -> option<U> {
+    fn negotiate_media_types<U: Copy>(mime_types: ~[(str, U)]) -> Option<U> {
         let mime_types = do mime_types.map |t_v| {
-            alt t_v {
-              (t, v) {
-                alt parse_mime_type(t) {
-                  (t, s) { (t, s, v) }
+            match t_v {
+              (t, v) => {
+                match parse_mime_type(t) {
+                  (t, s) => (t, s, v),
                 }
               }
             }
@@ -222,15 +208,15 @@ impl request<T: copy> for @request<T> {
         // Walk over the accepts in order and return the first item that
         // matches.
         for self.accepts().each |accept| {
-            alt accept.mime_type {
-              (typ, subtyp) {
+            match accept.mime_type {
+              (typ, subtyp) => {
                 for mime_types.each |t_s_v| {
-                    alt t_s_v {
-                      (t, s, v) {
+                    match t_s_v {
+                      (t, s, v) => {
                         if
                          (*typ == "*" || typ == t) &&
                          (*subtyp == "*" || subtyp == s) {
-                          ret some(v)
+                          return Some(v)
                         }
                       }
                     }
@@ -239,7 +225,7 @@ impl request<T: copy> for @request<T> {
             }
         }
 
-        none
+        None
     }
 }
 

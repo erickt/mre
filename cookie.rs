@@ -1,71 +1,68 @@
-import std::time;
-import std::time::tm;
-
-type cookie = @{
+pub type cookie = @{
     name: @str,
     value: @str,
-    mut path: option<@str>,
-    mut domain: option<@str>,
-    mut max_age: option<uint>,
+    mut path: Option<@str>,
+    mut domain: Option<@str>,
+    mut max_age: Option<uint>,
     mut secure: bool,
     mut http_only: bool
 };
 
-fn cookie(name: @str, value: @str) -> cookie {
+pub fn cookie(name: @str, value: @str) -> cookie {
     @{
         name: name,
         value: value,
-        mut path: none,
-        mut domain: none,
-        mut max_age: none,
+        mut path: None,
+        mut domain: None,
+        mut max_age: None,
         mut secure: false,
         mut http_only: false
     }
 }
 
-impl cookie for cookie {
-    fn to_header() -> result<str, str> {
+impl cookie {
+    fn to_header() -> Result<str, str> {
         // FIXME: Move error checking to the constructor.
 
         if !cookie_parser::is_name(*self.name) {
-            ret err("invalid name");
+            return Err("invalid name");
         }
 
         let mut cookie = if *self.value == "" {
             *self.name + "="
         } else {
             if !cookie_parser::is_value(*self.value) {
-                ret err("invalid value");
+                return Err("invalid value");
             }
 
             *self.name + "=" + *self.value
         };
 
-        alt copy self.domain {
-          none {}
-          some(domain) {
+        match copy self.domain {
+          None => { },
+          Some(domain) => {
             if cookie_parser::is_domain(domain) {
                 cookie += "; domain=" + *domain;
             } else {
-                ret err("invalid domain");
+                return Err("invalid domain");
             }
           }
         }
 
-        alt copy self.path {
-          none {}
-          some(path) {
+        match copy self.path {
+          None => { }
+          Some(path) => {
             if cookie_parser::is_path(path) {
                 cookie += "; path=" + *path;
             } else {
-                ret err("invalid path");
+                return Err("invalid path");
             }
           }
         }
 
-        alt copy self.max_age {
-          none {}
-          some(max_age) {
+        match copy self.max_age {
+          None => { }
+          Some(max_age) => {
             let tm = if max_age == 0u {
                 std::time::at({ sec: 0_i64, nsec: 0_i32 })
             } else {
@@ -83,89 +80,89 @@ impl cookie for cookie {
         if self.secure    { cookie += "; Secure"; }
         if self.http_only { cookie += "; HttpOnly"; }
 
-        ok(cookie)
+        Ok(cookie)
     }
 }
 
-fn parse_header(header: str) -> result<@~[cookie], str> {
+pub fn parse_header(header: str) -> Result<@~[cookie], str> {
     let header = header.trim();
 
     // Exit early if empty.
-    if header == "" { ret err("empty cookie") }
+    if header == "" { return Err("empty cookie") }
 
-    let cookies = dvec();
+    let cookies = DVec();
 
     for header.split_char(';').each |line| {
         let parts = str::splitn_char(line, '=', 1u);
 
         let (name, value) = if parts.len() == 1u {
-            ret err("empty cookie value")
+            return Err("empty cookie value")
         } else {
             (parts[0u].trim(), parts[1u].trim())
         };
 
         if !cookie_parser::is_name(name) {
-            ret err(#fmt("invalid cookie name: %?", name));
+            return Err(#fmt("invalid cookie name: %?", name));
         }
 
         if !cookie_parser::is_value(value) {
-            ret err(#fmt("invalid cookie value: %?", value));
+            return Err(#fmt("invalid cookie value: %?", value));
         }
 
         cookies.push(cookie(@name, @value));
     }
 
-    ok(@vec::from_mut(dvec::unwrap(cookies)))
+    Ok(@vec::from_mut(dvec::unwrap(cookies)))
 }
 
-fn parse_headers(headers: @dvec<@str>) -> result<hashmap<str, cookie>, str> {
-    let mut cookies = str_hash();
+pub fn parse_headers(headers: @DVec<@str>) -> Result<HashMap<str, cookie>, str> {
+    let mut cookies = HashMap();
 
     for (*headers).each |header| {
-        alt parse_header(*header) {
-          ok(cs) {
+        match parse_header(*header) {
+          Ok(cs) => {
             for (*cs).each |cookie| {
                 cookies.insert(copy *cookie.name, cookie);
             }
-          }
-          err(e) { ret err(copy e); }
+          },
+          Err(e) => return Err(copy e),
         }
     }
 
-    ok(cookies)
+    Ok(cookies)
 }
 
 #[doc = "
 Helper functions for parsing cookies according to RFC 6265, Section 4.1.
 "]
 mod cookie_parser {
-    fn is_name(name: str) -> bool {
+    pub fn is_name(name: str) -> bool {
         http_parser::is_token(name)
     }
 
-    fn is_cookie_octet(ch: char) -> bool {
-        if !char::is_ascii(ch) { ret false; }
+    pub fn is_cookie_octet(ch: char) -> bool {
+        if !char::is_ascii(ch) { return false; }
 
-        alt ch {
-            '\x21' | '\x23' to '\x2b' | '\x2D' to '\x3A' | '\x3C' to '\x5B'
-          | '\x5D' to '\x7E' { true }
-          _ { false }
+        match ch {
+            '\x21' | '\x23' .. '\x2b' | '\x2D' .. '\x3A' | '\x3C' .. '\x5B'
+          | '\x5D' .. '\x7E' => true,
+          _ => false,
         }
     }
 
-    fn is_value(value: str) -> bool {
+    pub fn is_value(value: str) -> bool {
         let mut pos = 0u;
         let len = value.len();
 
         // Exit early if we have an empty string.
-        if len == 0u { ret true; }
+        if len == 0u { return true; }
 
         // Check if the value is surrounded by double quotes.
         let {ch, next} = str::char_range_at(value, pos);
 
         let quoted = if ch == '"' {
             pos = next;
-            if pos == len { ret false; }
+            if pos == len { return false; }
 
             true
         } else {
@@ -176,10 +173,10 @@ mod cookie_parser {
             let {ch, next} = str::char_range_at(value, pos);
 
             if quoted && ch == '"' {
-                ret next == len;
+                return next == len;
             }
 
-            if !is_cookie_octet(ch) { ret false; }
+            if !is_cookie_octet(ch) { return false; }
 
             pos = next;
         }
@@ -187,15 +184,15 @@ mod cookie_parser {
         !quoted && pos == len
     }
 
-    fn is_domain(_domain: @str) -> bool {
+    pub fn is_domain(_domain: @str) -> bool {
         // FIXME: Actually implement.
         true
     }
 
-    fn is_path(path: @str) -> bool {
+    pub fn is_path(path: @str) -> bool {
         for (*path).each_char |ch| {
             if !char::is_ascii(ch) || http_parser::is_ctl(ch) || ch == ';' {
-                ret false;
+                return false;
             }
         }
 
@@ -209,33 +206,33 @@ mod cookie_parser {
 Helper functions for parsing http according to RFC 2616, Section 2.2.
 "]
 mod http_parser {
-    fn is_char(ch: char) -> bool {
+    pub fn is_char(ch: char) -> bool {
         char::is_ascii(ch)
     }
 
-    fn is_ctl(ch: char) -> bool {
-        alt ch {
-          '\x00' to '\x1f' | '\x7f' { true }
-          _ { false }
+    pub fn is_ctl(ch: char) -> bool {
+        match ch {
+          '\x00' .. '\x1f' | '\x7f' => true,
+          _ => false,
         }
     }
 
-    fn is_separator(ch: char) -> bool {
-        alt ch {
+    pub fn is_separator(ch: char) -> bool {
+        match ch {
             '(' | ')' | '<' | '>'  | '@'
           | ',' | ';' | ':' | '\\' | '"'
           | '/' | '[' | ']' | '?'  | '='
-          | '{' | '}' | ' ' | '\t' { true }
-          _ { false }
+          | '{' | '}' | ' ' | '\t' => true,
+          _ => false,
         }
     }
 
-    fn is_token(token: str) -> bool {
-        if token.len() == 0u { ret false; }
+    pub fn is_token(token: str) -> bool {
+        if token.len() == 0u { return false; }
 
         for token.each_char |ch| {
             if !is_char(ch) || is_ctl(ch) || is_separator(ch) {
-                ret false;
+                return false;
             }
         }
 

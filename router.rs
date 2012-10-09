@@ -1,19 +1,19 @@
-import request::{method, request};
-import response::response;
+use request::{method, request};
+use response::response;
 
-type handler<T> = fn@(@request<T>, @response, pcre::match);
+pub type handler<T> = fn@(@request<T>, @response, pcre::Match);
 
-type router<T> = {
-    routes: dvec<(method, @pcre::pcre, handler<T>)>,
+pub type router<T> = {
+    routes: DVec<(method, @pcre::Pcre, handler<T>)>,
 };
 
-fn router<T>() -> router<T> {
-    { routes: dvec() }
+pub fn router<T>() -> router<T> {
+    { routes: DVec() }
 }
 
-impl router<T> for router<T> {
+impl<T> router<T> {
     fn add(method: method, pattern: str, handler: handler<T>) {
-        let regex = pcre::pcre(pattern);
+        let regex = pcre::Pcre(pattern);
 
         if regex.is_err() {
             fail *regex.get_err();
@@ -24,33 +24,33 @@ impl router<T> for router<T> {
 
     fn add_patterns(items: ~[(method, str, handler<T>)]) {
         for items.each |item| {
-            alt item {
-              (method, pattern, handler) {
+            match item {
+              (method, pattern, handler) => {
                 self.add(method, pattern, handler)
               }
             }
         };
     }
 
-    fn find(method: method, path: str) -> option<(handler<T>, pcre::match)> {
+    fn find(method: method, path: str) -> Option<(handler<T>, pcre::Match)> {
         for self.routes.each() |item| {
             let (meth, regex, handler) = item;
 
             if method == meth {
-                alt (*regex).match(path) {
-                  none { }
-                  some(m) { ret some((handler, m)); }
+                match regex.exec(path) {
+                  None => { },
+                  Some(m) => return Some((handler, m)),
                 }
             }
         }
-        none
+        None
     }
 }
 
 #[cfg(test)]
 mod tests {
-    import pcre::match;
-    import request::GET;
+    use pcre::Match;
+    use request::GET;
 
     fn check_path<T>(router: router<T>, method: method, path: str,
                      f: handler<T>, captures: @~[@str]) {
@@ -62,8 +62,8 @@ mod tests {
     #[test]
     fn test_router() {
         let router = router::<()>();
-        router.find(GET, "") == none;
-        router.find(GET, "/foo/bar/baz") == none;
+        router.find(GET, "") == None;
+        router.find(GET, "/foo/bar/baz") == None;
 
         let a = { |_req, rep: @response, _m| rep.reply_http(200u, "") };
         let b = { |_req, rep: @response, _m| rep.reply_http(200u, "") };

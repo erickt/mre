@@ -1,13 +1,11 @@
-import elasticsearch::client;
-import model::{model, error};
+use elasticsearch::Client;
+use model::{model, error};
 
-class _session {
-    let model: model;
+pub struct session {
+    model: model,
+}
 
-    new(model: model) {
-        self.model = model;
-    }
-    
+impl session {
     fn id() -> @str { self.model._id }
 
     fn user_id() -> @str { self.model.get_str("user_id") }
@@ -15,11 +13,11 @@ class _session {
         self.model.set_str("user_id", user_id)
     }
 
-    fn create() -> result<(), error> {
+    fn create() -> Result<(), error> {
         self.model.create()
     }
 
-    fn save() -> result<(), error> {
+    fn save() -> Result<(), error> {
         self.model.save()
     }
 
@@ -28,17 +26,17 @@ class _session {
     }
 }
 
-type session = _session;
-
-fn session(es: client, index: @str, user_id: @str) -> session {
+pub fn session(es: Client, index: @str, user_id: @str) -> session {
     let id = crypto::rand::rand_bytes(32u).to_base64();
-    let session = _session(model(es, index, @"session", @id));
+    let session = session { model: model(es, index, @"session", @id) };
 
     session.set_user_id(user_id);
 
     session
 }
 
-fn find(es: client, index: @str, id: @str) -> option<session> {
-    model::find(es, index, @"session", id).map(|model| _session(model))
+pub fn find(es: Client, index: @str, id: @str) -> Option<session> {
+    do model::find(es, index, @"session", id).map |model| {
+        session { model: model }
+    }
 }

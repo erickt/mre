@@ -3,30 +3,33 @@
        uuid = "b85803ee-819d-4b9d-adcd-ed8e356ceee3")];
 #[crate_type = "lib"];
 
-use std;
-use mongrel2;
-use mustache;
-use pcre;
-use zmq;
-use crypto;
-use elasticsearch;
+extern mod std;
+extern mod mongrel2;
+extern mod mustache;
+extern mod pcre;
+extern mod zmq;
+extern mod crypto;
+extern mod elasticsearch;
 
-mod auth;
-mod cookie;
-mod middleware;
-mod model;
-mod request;
-mod response;
-mod router;
-mod session;
-mod user;
+pub mod auth;
+pub mod cookie;
+pub mod middleware;
+pub mod model;
+pub mod request;
+pub mod response;
+pub mod router;
+pub mod session;
+pub mod user;
 
-import dvec::{dvec, extensions};
-import io::{reader, reader_util, writer, writer_util};
-import result::{result, ok, err};
-import to_bytes::to_bytes;
+use dvec::DVec;
+use io::{ReaderUtil, WriterUtil};
+use to_bytes::ToBytes;
 
-import std::map::{hashmap, str_hash};
-import std::json;
-import std::json::{json, to_json};
-import std::base64::{to_base64, from_base64};
+use std::time;
+use std::time::Tm;
+use std::map::HashMap;
+use std::json;
+use std::json::{Json, ToJson};
+use std::base64::{ToBase64, FromBase64};
+
+use zmq::Error;
