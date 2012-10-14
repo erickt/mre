@@ -21,9 +21,9 @@ pub struct Model {
     es: Client,
     _index: ~str,
     _type: ~str,
-    mut _id: ~str,
+    _id: ~str,
     _parent: Option<~str>,
-    mut _version: Option<uint>,
+    _version: Option<uint>,
     source: json::Object,
 }
 
@@ -245,7 +245,10 @@ impl Model {
         self.set_float(key, value as float)
     }
 
-    fn index(&self, op_type: elasticsearch::OpType) -> Result<(), Error> {
+    fn index(
+        &self,
+        op_type: elasticsearch::OpType
+    ) -> Result<(~str, uint), Error> {
         let index = self.es.prepare_index(copy self._index, copy self._type)
             .set_op_type(op_type)
             .set_source(~copy self.source)
@@ -275,16 +278,13 @@ impl Model {
                 &json::String(id) => copy id,
                 _ => fail,
             };
+
             let version = match body.get_ref(&~"_version") {
                 &json::Number(version) => version as uint,
                 _ => fail,
             };
 
-            // Update our id and version.
-            self._id = id;
-            self._version = Some(version);
-
-            Ok(())
+            Ok((id, version))
 
         } else {
             match rep.body {
@@ -301,11 +301,11 @@ impl Model {
         }
     }
 
-    fn create(&self) -> Result<(), Error> {
+    fn create(&self) -> Result<(~str, uint), Error> {
         self.index(elasticsearch::CREATE)
     }
 
-    fn save(&self) -> Result<(), Error> {
+    fn save(&self) -> Result<(~str, uint), Error> {
         self.index(elasticsearch::INDEX)
     }
 

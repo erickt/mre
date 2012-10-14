@@ -7,7 +7,7 @@ pub struct User {
 }
 
 pub impl User {
-    fn id(&self) -> ~str { copy self.model._id }
+    fn id(&self) -> &self/~str { &self.model._id }
 
     fn password(&self) -> ~str {
         self.model.get_str(&~"password")
@@ -22,11 +22,11 @@ pub impl User {
         hasher.verify(password, self.password())
     }
 
-    fn create(&self) -> Result<(), Error> {
+    fn create(&self) -> Result<(~str, uint), Error> {
         self.model.create()
     }
 
-    fn save(&self) -> Result<(), Error> {
+    fn save(&self) -> Result<(~str, uint), Error> {
         self.model.save()
     }
 
