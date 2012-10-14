@@ -1,10 +1,3 @@
-use std;
-use zmq;
-use mre;
-
-// Import some common things into the global namespace.
-import result::{result, ok, err};
-import to_bytes::to_bytes;
-import zmq::to_str;
-import mre::mre;
-import mre::response::response;
+extern mod std;
+extern mod zmq;
+extern mod mre;
