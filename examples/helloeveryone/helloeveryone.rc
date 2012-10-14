@@ -1,27 +1,17 @@
-use std;
-use zmq;
-use mre;
-use elasticsearch;
-use mustache;
-use uri;
+extern mod std;
+extern mod zmq;
+extern mod mre;
+extern mod elasticsearch;
+extern mod mustache;
 
 // Import some common things into the global namespace.
-import result::{result, ok, err};
-import dvec::{dvec, extensions};
-import to_bytes::to_bytes;
-import std::map::{hashmap, hash_from_strs};
-import std::json::to_json;
+use std::map::hash_from_vec;
+use std::net::url;
 
-import zmq::to_str;
-import mre::mre;
-import mre::request::request;
-import mre::response::response;
-import mre::model;
-import elasticsearch::{
-    client,
-    search_builder,
-    json_dict_builder,
-    json_list_builder};
-import mustache::to_mustache;
+use elasticsearch::{
+    SearchBuilder,
+    JsonObjectBuilder,
+    JsonListBuilder};
+use mustache::ToMustache;
 
 mod person;
