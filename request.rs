@@ -1,6 +1,6 @@
-use std::sort;
+use response::Response;
 
-pub enum method {
+pub enum Method {
     HEAD,
     GET,
     POST,
@@ -12,54 +12,76 @@ pub enum method {
     PATCH
 }
 
-pub type accept = {
-    mime_type: (@str, @str),
+impl Method: cmp::Eq {
+    pure fn eq(other: &Method) -> bool {
+        match (self, *other) {
+            (HEAD, HEAD)
+            | (GET, GET)
+            | (POST, POST)
+            | (PUT, PUT)
+            | (DELETE, DELETE)
+            | (TRACE, TRACE)
+            | (OPTIONS, OPTIONS)
+            | (CONNECT, CONNECT)
+            | (PATCH, PATCH) => true,
+            _ => false
+        }
+    }
+
+    pure fn ne(other: &Method) -> bool { !self.eq(other) }
+}
+
+pub struct Accept {
+    mime_type: (~str, ~str),
     quality: float,
-    options: @~[@str],
-};
+    options: ~[~str],
+}
 
-pub type request<T> = {
+pub struct Request<T> {
     req: @mongrel2::Request,
-    method: method,
-    cookies: HashMap<str, cookie::cookie>,
-    mut data: T,
-    mut _accepts: Option<~[accept]>,
-};
+    method: Method,
+    cookies: LinearMap<~str, cookie::Cookie>,
+    data: T,
+    priv mut _accepts: Option<@~[@Accept]>,
+}
 
-pub fn request<T: Copy>(req: @mongrel2::Request, rep: @response, data: T)
-  -> Option<@request<T>> {
-    let method = match req.headers.find("METHOD") {
+pub fn Request<T: Copy>(
+    req: @mongrel2::Request,
+    rep: @mut Response,
+    data: T
+) -> Option<Request<T>> {
+    let method = match req.headers.find_ref(&~"METHOD") {
         None => {
-            rep.reply_http(400u, "");
+            rep.reply_http(400, "");
             return None
         },
         Some(methods) => {
-            assert (*methods).len() == 1u;
+            assert methods.len() == 1;
 
-            match *(*methods)[0u] {
-                "HEAD" => HEAD,
-                "GET" => GET,
-                "POST" => POST,
-                "PUT" => PUT,
-                "DELETE" => DELETE,
-                "TRACE" => TRACE,
-                "OPTIONS" => OPTIONS,
-                "CONNECT" => CONNECT,
-                "PATCH" => PATCH,
+            match methods[0] {
+                ~"HEAD" => HEAD,
+                ~"GET" => GET,
+                ~"POST" => POST,
+                ~"PUT" => PUT,
+                ~"DELETE" => DELETE,
+                ~"TRACE" => TRACE,
+                ~"OPTIONS" => OPTIONS,
+                ~"CONNECT" => CONNECT,
+                ~"PATCH" => PATCH,
                 _ => {
-                    rep.reply_http(501u, "");
+                    rep.reply_http(501, "");
                     return None
                 }
             }
         }
     };
 
-    let cookies = match req.headers.find("cookie") {
-        None => HashMap(),
+    let cookies = match req.headers.find_ref(&~"cookie") {
+        None => LinearMap(),
         Some(cookies) => {
-            match cookie::parse_headers(cookies) {
-                Ok(cookies) => cookies,
-                Err(e) => {
+            match cookie::parse_headers(*cookies) {
+                Ok(move cookies) => cookies,
+                Err(move e) => {
                     rep.reply_http(400u, e);
                     return None
                 }
@@ -67,32 +89,31 @@ pub fn request<T: Copy>(req: @mongrel2::Request, rep: @response, data: T)
         }
     };
 
-    Some(@{
+    Some(Request {
         req: req,
         method: method,
         cookies: cookies,
-        mut data: data,
-        mut _accepts: None,
+        data: data,
+        _accepts: None,
     })
 }
 
-#[doc = "Split a mime string into the mime type and subtype."]
-fn parse_mime_type(mime_type: str) -> (@str, @str) {
+/// Split a mime string into the mime type and subtype.
+fn parse_mime_type(mime_type: &str) -> (~str, ~str) {
     let parts = str::splitn_char(mime_type, '/', 1u);
     let typ = copy parts[0];
-    let subtyp = if parts.len() == 2u { copy parts[1] } else { "*" };
+    let subtyp = if parts.len() == 2u { copy parts[1] } else { ~"*" };
 
-    (@typ, @subtyp)
+    (typ, subtyp)
 }
 
-#[doc = ""]
-fn parse_accept_header(header: str) -> ~[accept] {
+fn parse_accept_header(header: &str) -> @~[@Accept] {
     let accepts = do header.split_char(',').map |e| {
-        let parts = str::replace(e, " ", "").split_char(';');
+        let parts = str::replace(*e, ~" ", ~"").split_char(';');
 
         let mime_type = parse_mime_type(parts[0]);
         let mut quality = 1.0;
-        let mut options = DVec();
+        let mut options = ~[];
 
         if parts.len() > 1u {
             for parts.view(1, parts.len()).each |option| {
@@ -103,103 +124,135 @@ fn parse_accept_header(header: str) -> ~[accept] {
                       Some(q) => quality = q,
                     }
                 } else {
-                    options.push(@copy option);
+                    options.push(copy *option);
                 }
             }
         }
 
-        {
+        @Accept {
             mime_type: mime_type,
             quality: quality,
-            options: @vec::from_mut(dvec::unwrap(options))
+            options: move options,
         }
     };
 
     // Sort by quality, with highest quality first.
-    sort::merge_sort(|e1, e2| e1.quality >= e2.quality, accepts)
+    @sort::merge_sort(|e1, e2| e1.quality >= e2.quality, accepts)
 }
 
-impl<T> @request<T> {
-    fn body() -> @~[u8] {
-        self.req.body
+impl Accept: cmp::Eq {
+    pure fn eq(other: &Accept) -> bool {
+        self.mime_type == other.mime_type &&
+        self.quality == other.quality &&
+        self.options == other.options
     }
 
-    fn path() -> @str {
-        self.req.path
+    pure fn ne(other: &Accept) -> bool { !self.eq(other) }
+}
+
+impl<T> Request<T> {
+    fn body(&self) -> &self/~[u8] {
+        &self.req.body
+    }
+
+    fn path(&self) -> &self/~str {
+        &self.req.path
     }
 
     fn is_disconnect() -> bool {
         self.req.is_disconnect()
     }
 
-    fn find_headers(key: str) -> Option<@DVec<@str>> {
-        self.req.headers.find(key)
+    fn find_headers(&self, key: &~str) -> Option<~[~str]> {
+        match self.req.headers.find_ref(key) {
+            Some(headers) => Some(copy *headers),
+            None => None
+        }
     }
 
-    fn find_header(key: str) -> Option<@str> {
+    fn find_header(&self, key: &~str) -> Option<~str> {
         match self.find_headers(key) {
           None => None,
           Some(values) => { 
-            if (*values).len() == 0u {
+            if values.len() == 0u {
                 None
             } else {
-                Some((*values)[0u])
+                Some(copy values[0u])
             }
           }
         }
     }
 
-    fn content_type() -> Option<@str> {
-        self.find_header("content-type")
-    }
-
-    fn accepts() -> ~[accept] {
-        // Lazily parse the accept header.
-        match self._accepts {
-            None => {
-                let accepts = match self.find_header("accept") {
-                    None => {
-                        // If we don't have the header, assume we accept
-                        // everything.
-                        ~[{
-                            mime_type: (@"*", @"*"),
-                            quality: 1.0,
-                            options: @~[]
-                        }]
-                    }
-                    Some(accept) => parse_accept_header(*accept),
-                };
-
-                self._accepts = Some(copy accepts);
-
-                accepts
+    fn find_header(@self, key: &~str) -> Option<~str> {
+        match self.find_headers(key) {
+          None => None,
+          Some(values) => { 
+            if values.len() == 0u {
+                None
+            } else {
+                Some(copy values[0u])
             }
-            Some(accepts) => copy accepts,
+          }
         }
     }
 
-    fn accept(mime_type: str) -> bool {
+
+    fn content_type() -> Option<~str> {
+        self.find_header(&~"content-type")
+    }
+
+    fn accepts(&self) -> @~[@Accept] {
+        // Lazily parse the accept header.
+        match self._accepts {
+            Some(accepts) => accepts,
+            None => {
+                let accepts = match self.find_header(&~"accept") {
+                    None => {
+                        // If we don't have the header, assume we accept
+                        // everything.
+                        @~[@Accept {
+                            mime_type: (~"*", ~"*"),
+                            quality: 1.0,
+                            options: ~[]
+                        }]
+                    }
+                    Some(accept) => parse_accept_header(accept),
+                };
+
+                self._accepts = Some(move accepts);
+
+                match self._accepts {
+                    Some(accepts) => accepts,
+                    None => fail,
+                }
+            }
+        }
+    }
+
+    fn accept(mime_type: &str) -> bool {
         let (typ, subtyp) = parse_mime_type(mime_type);
 
         for self.accepts().each |accept| {
-            let (t, s) = accept.mime_type;
-
-            if
-              (*typ == "*" || typ == t) &&
-              (*subtyp == "*" || subtyp == s) {
-                return true;
+            match accept.mime_type {
+                (t, s) => {
+                    if
+                      (typ == ~"*" || typ == t) &&
+                      (subtyp == ~"*" || subtyp == s) {
+                        return true;
+                    }
+                }
             }
         }
 
         false
     }
 
-    fn negotiate_media_types<U: Copy>(mime_types: ~[(str, U)]) -> Option<U> {
+    fn negotiate_media_types<U: Copy>(mime_types: ~[(~str, U)]) -> Option<U> {
         let mime_types = do mime_types.map |t_v| {
             match t_v {
-              (t, v) => {
+              &(t, v) => {
                 match parse_mime_type(t) {
-                  (t, s) => (t, s, v),
+                  (move t, move s) => (t, s, v),
                 }
               }
             }
@@ -212,10 +265,10 @@ impl<T> @request<T> {
               (typ, subtyp) => {
                 for mime_types.each |t_s_v| {
                     match t_s_v {
-                      (t, s, v) => {
+                      &(t, s, v) => {
                         if
-                         (*typ == "*" || typ == t) &&
-                         (*subtyp == "*" || subtyp == s) {
+                         (typ == ~"*" || typ == t) &&
+                         (subtyp == ~"*" || subtyp == s) {
                           return Some(v)
                         }
                       }
@@ -233,74 +286,74 @@ impl<T> @request<T> {
 mod tests {
     #[test]
     fn test_parse_accept_header_firefox() {
-        let firefox = "text/html," +
-                      "application/xhtml+xml," +
-                      "application/xml;q=0.9," +
-                      "*/*;q=0.8";
+        let firefox = ~"text/html,\
+                       application/xhtml+xml,\
+                       application/xml;q=0.9,\
+                       */*;q=0.8";
 
-        assert parse_accept_header(firefox) == ~[
-            {
-                mime_type: (@"text", @"html"),
+        assert parse_accept_header(firefox) == @~[
+            @Accept {
+                mime_type: (~"text", ~"html"),
                 quality: 1.0,
-                options: @~[]
+                options: ~[]
             },
-            {
-                mime_type: (@"application", @"xhtml+xml"),
+            @Accept {
+                mime_type: (~"application", ~"xhtml+xml"),
                 quality: 1.0,
-                options: @~[]
+                options: ~[]
             },
-            {
-                mime_type: (@"application", @"xml"),
+            @Accept {
+                mime_type: (~"application", ~"xml"),
                 quality: 0.9,
-                options: @~[]
+                options: ~[]
             },
-            {
-                mime_type: (@"*", @"*"),
+            @Accept {
+                mime_type: (~"*", ~"*"),
                 quality: 0.8,
-                options: @~[]
+                options: ~[]
             }
         ];
     }
 
     #[test]
     fn test_parse_accept_header_webkit() {
-        let webkit = "application/xml," +
-                     "application/xhtml+xml," +
-                     "text/html;q=0.9," +
-                     "text/plain;q=0.8," +
-                     "image/png," +
-                     "*/*;q=0.5";
+        let webkit = ~"application/xml,\
+                       application/xhtml+xml,\
+                       text/html;q=0.9,\
+                       text/plain;q=0.8,\
+                       image/png,\
+                       */*;q=0.5";
 
-        assert parse_accept_header(webkit) == ~[
-            {
-                mime_type: (@"application", @"xml"),
+        assert parse_accept_header(webkit) == @~[
+            @Accept {
+                mime_type: (~"application", ~"xml"),
                 quality: 1.0,
-                options: @~[]
+                options: ~[]
             },
-            {
-                mime_type: (@"application", @"xhtml+xml"),
+            @Accept {
+                mime_type: (~"application", ~"xhtml+xml"),
                 quality: 1.0,
-                options: @~[]
+                options: ~[]
             },
-            {
-                mime_type: (@"image", @"png"),
+            @Accept {
+                mime_type: (~"image", ~"png"),
                 quality: 1.0,
-                options: @~[]
+                options: ~[]
             },
-            {
-                mime_type: (@"text", @"html"),
+            @Accept {
+                mime_type: (~"text", ~"html"),
                 quality: 0.9,
-                options: @~[]
+                options: ~[]
             },
-            {
-                mime_type: (@"text", @"plain"),
+            @Accept {
+                mime_type: (~"text", ~"plain"),
                 quality: 0.8,
-                options: @~[]
+                options: ~[]
             },
-            {
-                mime_type: (@"*", @"*"),
+            @Accept {
+                mime_type: (~"*", ~"*"),
                 quality: 0.5,
-                options: @~[]
+                options: ~[]
             }
         ];
     }

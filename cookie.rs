@@ -1,80 +1,80 @@
-pub type cookie = @{
-    name: @str,
-    value: @str,
-    mut path: Option<@str>,
-    mut domain: Option<@str>,
-    mut max_age: Option<uint>,
-    mut secure: bool,
-    mut http_only: bool
-};
+pub struct Cookie {
+    name: ~str,
+    value: ~str,
+    path: Option<~str>,
+    domain: Option<~str>,
+    max_age: Option<uint>,
+    secure: bool,
+    http_only: bool
+}
 
-pub fn cookie(name: @str, value: @str) -> cookie {
-    @{
+pub fn Cookie(name: ~str, value: ~str) -> Cookie {
+    Cookie {
         name: name,
         value: value,
-        mut path: None,
-        mut domain: None,
-        mut max_age: None,
-        mut secure: false,
-        mut http_only: false
+        path: None,
+        domain: None,
+        max_age: None,
+        secure: false,
+        http_only: false
     }
 }
 
-impl cookie {
-    fn to_header() -> Result<str, str> {
+impl Cookie {
+    fn to_header() -> Result<~str, ~str> {
         // FIXME: Move error checking to the constructor.
 
-        if !cookie_parser::is_name(*self.name) {
-            return Err("invalid name");
+        if !cookie_parser::is_name(self.name) {
+            return Err(~"invalid name");
         }
 
-        let mut cookie = if *self.value == "" {
-            *self.name + "="
+        let mut cookie = if self.value.is_empty() {
+            self.name + "="
         } else {
-            if !cookie_parser::is_value(*self.value) {
-                return Err("invalid value");
+            if !cookie_parser::is_value(self.value) {
+                return Err(~"invalid value");
             }
 
-            *self.name + "=" + *self.value
+            fmt!("%s=%s", self.name, self.value)
         };
 
-        match copy self.domain {
-          None => { },
-          Some(domain) => {
-            if cookie_parser::is_domain(domain) {
-                cookie += "; domain=" + *domain;
-            } else {
-                return Err("invalid domain");
+        match self.domain {
+            None => { },
+            Some(domain) => {
+                if cookie_parser::is_domain(domain) {
+                    cookie += fmt!("; domain=%s", domain);
+                } else {
+                    return Err(~"invalid domain");
+                }
             }
-          }
         }
 
-        match copy self.path {
-          None => { }
-          Some(path) => {
-            if cookie_parser::is_path(path) {
-                cookie += "; path=" + *path;
-            } else {
-                return Err("invalid path");
+        match self.path {
+            None => { }
+            Some(path) => {
+                if cookie_parser::is_path(path) {
+                    cookie += fmt!("; path=%s", path);
+                } else {
+                    return Err(~"invalid path");
+                }
             }
-          }
         }
 
         match copy self.max_age {
-          None => { }
-          Some(max_age) => {
-            let tm = if max_age == 0u {
-                std::time::at({ sec: 0_i64, nsec: 0_i32 })
-            } else {
-                let t = std::time::get_time();
-                std::time::at_utc({ sec: t.sec + max_age as i64, nsec: 0_i32 })
-            };
+            None => { }
+            Some(max_age) => {
+                let tm = if max_age == 0u {
+                    std::time::at({ sec: 0_i64, nsec: 0_i32 })
+                } else {
+                    let t = std::time::get_time();
+                    std::time::at_utc({ sec: t.sec + max_age as i64, nsec: 0_i32 })
+                };
 
-            // Not every browser supports max-age...
-            //vec::push(cookie, "max-age=" + uint::str(max_age));
+                // Not every browser supports max-age...
+                //vec::push(cookie, "max-age=" + uint::str(max_age));
 
-            cookie += "; expires=" + tm.rfc822();
-          }
+                cookie += fmt!("; expires=%s", tm.rfc822());
+            }
         }
 
         if self.secure    { cookie += "; Secure"; }
@@ -84,48 +84,48 @@ impl cookie {
     }
 }
 
-pub fn parse_header(header: str) -> Result<@~[cookie], str> {
+pub fn parse_header(header: &str) -> Result<~[Cookie], ~str> {
     let header = header.trim();
 
     // Exit early if empty.
-    if header == "" { return Err("empty cookie") }
+    if header.is_empty() { return Err(~"empty cookie") }
 
-    let cookies = DVec();
+    let mut cookies = ~[];
 
     for header.split_char(';').each |line| {
-        let parts = str::splitn_char(line, '=', 1u);
+        let parts = str::splitn_char(*line, '=', 1u);
 
         let (name, value) = if parts.len() == 1u {
-            return Err("empty cookie value")
+            return Err(~"empty cookie value")
         } else {
             (parts[0u].trim(), parts[1u].trim())
         };
 
         if !cookie_parser::is_name(name) {
-            return Err(#fmt("invalid cookie name: %?", name));
+            return Err(fmt!("invalid cookie name: %?", name));
         }
 
         if !cookie_parser::is_value(value) {
-            return Err(#fmt("invalid cookie value: %?", value));
+            return Err(fmt!("invalid cookie value: %?", value));
         }
 
-        cookies.push(cookie(@name, @value));
+        cookies.push(Cookie(name, value));
     }
 
-    Ok(@vec::from_mut(dvec::unwrap(cookies)))
+    Ok(cookies)
 }
 
-pub fn parse_headers(headers: @DVec<@str>) -> Result<HashMap<str, cookie>, str> {
-    let mut cookies = HashMap();
+pub fn parse_headers(headers: &[~str]) -> Result<LinearMap<~str, Cookie>, ~str> {
+    let mut cookies = LinearMap();
 
-    for (*headers).each |header| {
+    for headers.each |header| {
         match parse_header(*header) {
-          Ok(cs) => {
-            for (*cs).each |cookie| {
-                cookies.insert(copy *cookie.name, cookie);
-            }
-          },
-          Err(e) => return Err(copy e),
+            Ok(move cs) => {
+                do vec::consume(cs) |_i, cookie| {
+                    cookies.insert(copy cookie.name, move cookie);
+                }
+            },
+            Err(move e) => return Err(e),
         }
     }
 
@@ -136,7 +136,7 @@ pub fn parse_headers(headers: @DVec<@str>) -> Result<HashMap<str, cookie>, str> 
 Helper functions for parsing cookies according to RFC 6265, Section 4.1.
 "]
 mod cookie_parser {
-    pub fn is_name(name: str) -> bool {
+    pub fn is_name(name: &str) -> bool {
         http_parser::is_token(name)
     }
 
@@ -150,7 +150,7 @@ mod cookie_parser {
         }
     }
 
-    pub fn is_value(value: str) -> bool {
+    pub fn is_value(value: &str) -> bool {
         let mut pos = 0u;
         let len = value.len();
 
@@ -184,13 +184,13 @@ mod cookie_parser {
         !quoted && pos == len
     }
 
-    pub fn is_domain(_domain: @str) -> bool {
+    pub fn is_domain(_domain: &str) -> bool {
         // FIXME: Actually implement.
         true
     }
 
-    pub fn is_path(path: @str) -> bool {
-        for (*path).each_char |ch| {
+    pub fn is_path(path: &str) -> bool {
+        for str::each_char(path) |ch| {
             if !char::is_ascii(ch) || http_parser::is_ctl(ch) || ch == ';' {
                 return false;
             }
@@ -227,10 +227,10 @@ mod http_parser {
         }
     }
 
-    pub fn is_token(token: str) -> bool {
+    pub fn is_token(token: &str) -> bool {
         if token.len() == 0u { return false; }
 
-        for token.each_char |ch| {
+        for str::each_char(token) |ch| {
             if !is_char(ch) || is_ctl(ch) || is_separator(ch) {
                 return false;
             }

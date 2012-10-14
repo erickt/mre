@@ -13,7 +13,7 @@ extern mod elasticsearch;
 
 pub mod auth;
 pub mod cookie;
-pub mod middleware;
+//pub mod middleware;
 pub mod model;
 pub mod request;
 pub mod response;
@@ -23,13 +23,15 @@ pub mod user;
 
 use dvec::DVec;
 use io::{ReaderUtil, WriterUtil};
+use send_map::linear::LinearMap;
 use to_bytes::ToBytes;
 
-use std::time;
-use std::time::Tm;
-use std::map::HashMap;
-use std::json;
-use std::json::{Json, ToJson};
 use std::base64::{ToBase64, FromBase64};
+use std::json::{Json, ToJson};
+use std::json;
+use std::map::HashMap;
+use std::sort;
+use std::time::Tm;
+use std::time;
 
 use zmq::Error;
